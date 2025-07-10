@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Buy Electricity</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body>
+  <div class="p-4 bg-blue-600 text-white flex justify-between">
+    <h1 class="text-2xl">Buy Electricity</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="bg-white text-blue-600 px-3 py-1 rounded">Back</a>
+  </div>
+
+  <div class="container mx-auto mt-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-2 text-{{category}}-600">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <form method="POST">
+      <div class="mb-4">
+        <label class="block mb-1">Meter Number</label>
+        <!-- We'll give an ID to this input so we can attach a JS event listener -->
+        <input 
+          type="text" 
+          name="meter_number" 
+          id="meter_number" 
+          class="border p-2 w-1/2"
+        >
+        
+        <!-- A small div to display feedback about the meter -->
+        <div id="meterFeedback" class="mt-1 text-sm"></div>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block mb-1">Amount (Currency)</label>
+        <input type="number" step="0.01" name="amount" class="border p-2 w-1/2">
+      </div>
+      
+      <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Buy</button>
+    </form>
+  </div>
+
+  <!-- JavaScript for live checking meter existence -->
+  <script>
+    const meterInput = document.getElementById('meter_number');
+    const feedbackDiv = document.getElementById('meterFeedback');
+
+    meterInput.addEventListener('blur', () => {
+      const meterValue = meterInput.value.trim();
+      if(!meterValue){
+        feedbackDiv.textContent = '';
+        return;
+      }
+      // Perform a GET request to /admin/check_meter?meter=...
+      fetch(`/admin/check_meter?meter=${encodeURIComponent(meterValue)}`)
+        .then(response => response.json())
+        .then(data => {
+          if(data.exists){
+            feedbackDiv.textContent = `Meter exists for user: ${data.username}`;
+            feedbackDiv.classList.remove('text-red-600');
+            feedbackDiv.classList.add('text-green-600');
+          } else {
+            feedbackDiv.textContent = 'No user found for that meter number.';
+            feedbackDiv.classList.remove('text-green-600');
+            feedbackDiv.classList.add('text-red-600');
+          }
+        })
+        .catch(err => {
+          feedbackDiv.textContent = 'Error checking meter. Please try again.';
+          feedbackDiv.classList.remove('text-green-600');
+          feedbackDiv.classList.add('text-red-600');
+          console.error(err);
+        });
+    });
+  </script>
+</body>
+</html>

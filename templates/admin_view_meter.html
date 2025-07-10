@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin View Meter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <!-- Top Bar -->
+  <div class="p-4 bg-blue-600 text-white flex justify-between items-center">
+    <h1 class="text-2xl">View Meter</h1>
+    <a href="{{ url_for('admin_dashboard') }}" class="bg-white text-blue-600 px-3 py-1 rounded">Back</a>
+  </div>
+  
+  <div class="container mx-auto mt-6">
+    <!-- Search Input -->
+    <div class="mb-4">
+      <label class="block mb-2 font-semibold">Search Meter Number:</label>
+      <input type="text" id="meterSearch" placeholder="Type meter number..." 
+             class="border p-2 w-full md:w-1/2">
+    </div>
+    
+    <!-- Live Search Results -->
+    <div id="searchResults" class="bg-white border rounded shadow p-4 mb-6 hidden"></div>
+    
+    <!-- Meter Data Display: Three Horizontal Squares -->
+    <div id="meterDataDisplay" class="mt-6 hidden">
+      <div class="flex justify-center space-x-4">
+        <!-- Voltage Square -->
+        <div class="w-40 h-40 border border-gray-300 rounded shadow flex flex-col items-center justify-center">
+          <p class="text-2xl font-bold">Voltage</p>
+          <p id="voltageDisplay" class="text-xl font-bold"></p>
+        </div>
+        <!-- Current Square -->
+        <div class="w-40 h-40 border border-gray-300 rounded shadow flex flex-col items-center justify-center">
+          <p class="text-2xl font-bold">Current</p>
+          <p id="currentDisplay" class="text-xl font-bold"></p>
+        </div>
+        <!-- Power Square -->
+        <div class="w-40 h-40 border border-gray-300 rounded shadow flex flex-col items-center justify-center">
+          <p class="text-2xl font-bold">Power</p>
+          <p id="powerDisplay" class="text-xl font-bold"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Grab elements
+    const meterSearch = document.getElementById('meterSearch');
+    const searchResults = document.getElementById('searchResults');
+    const meterDataDisplay = document.getElementById('meterDataDisplay');
+    const voltageDisplay = document.getElementById('voltageDisplay');
+    const currentDisplay = document.getElementById('currentDisplay');
+    const powerDisplay = document.getElementById('powerDisplay');
+    
+    let searchTimeout = null;
+    let meterUpdateInterval = null; // To hold the interval ID for real-time updates
+    
+    // Debounced live search for matching meters
+    meterSearch.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      const query = meterSearch.value.trim();
+      if(query.length === 0) {
+        searchResults.classList.add('hidden');
+        return;
+      }
+      searchTimeout = setTimeout(() => {
+        fetch(`/admin/api/users?search=${encodeURIComponent(query)}`)
+          .then(response => response.json())
+          .then(data => {
+            if(data.length === 0) {
+              searchResults.innerHTML = '<p class="text-red-600">No matching meters found.</p>';
+            } else {
+              let html = '<ul>';
+              data.forEach(user => {
+                html += `<li class="cursor-pointer hover:bg-gray-200 p-2" onclick="selectMeter('${user.meter_number}')">
+                           <span class="font-bold">${user.meter_number}</span> - ${user.username}
+                         </li>`;
+              });
+              html += '</ul>';
+              searchResults.innerHTML = html;
+            }
+            searchResults.classList.remove('hidden');
+          })
+          .catch(err => {
+            console.error(err);
+          });
+      }, 300);
+    });
+    
+    // Function to fetch and update meter reading
+    function updateMeterReading(meterNumber) {
+      fetch(`/api/latest-reading/${meterNumber}`)
+        .then(response => response.json())
+        .then(data => {
+          meterDataDisplay.classList.remove('hidden');
+          if(data.error) {
+            voltageDisplay.innerText = 'N/A';
+            currentDisplay.innerText = 'N/A';
+            powerDisplay.innerText = 'N/A';
+          } else {
+            voltageDisplay.innerText = `${data.voltage} V`;
+            currentDisplay.innerText = `${data.current} A`;
+            powerDisplay.innerText = `${data.power} W`;
+          }
+        })
+        .catch(err => {
+          console.error(err);
+        });
+    }
+    
+    // Called when a meter is clicked from the list
+    function selectMeter(meterNumber) {
+      meterSearch.value = meterNumber;
+      searchResults.classList.add('hidden');
+      // Clear any previous interval
+      if(meterUpdateInterval) {
+        clearInterval(meterUpdateInterval);
+      }
+      // Immediately fetch the reading once
+      updateMeterReading(meterNumber);
+      // Set up real-time updates every second
+      meterUpdateInterval = setInterval(() => {
+        updateMeterReading(meterNumber);
+      }, 500);
+    }
+  </script>
+</body>
+</html>

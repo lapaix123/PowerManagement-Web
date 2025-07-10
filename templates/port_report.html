@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Port Report for Meter {{ meter_number }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <!-- Topbar -->
+  <header class="bg-blue-600 text-white py-4">
+    <div class="max-w-7xl mx-auto flex justify-between items-center px-4">
+      <h1 class="text-2xl font-bold">CashPower Dashboard</h1>
+      <a href="{{ url_for('user_dashboard') }}" class="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-blue-100 transition">
+        Back to Dashboard
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Report Container -->
+  <main class="max-w-4xl mx-auto p-6">
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-3xl font-bold mb-6 text-center">Meter Report</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parameter</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Meter Number</td>
+              <td id="reportMeterNumber" class="px-6 py-4 whitespace-nowrap text-gray-900">{{ meter_number }}</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Latest Purchased Power (W)</td>
+              <td id="reportLatestPurchasedPower" class="px-6 py-4 whitespace-nowrap text-gray-900">--</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Current Power (W)</td>
+              <td id="reportCurrentPower" class="px-6 py-4 whitespace-nowrap text-gray-900">--</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Consumed Power (W)</td>
+              <td id="reportConsumedPower" class="px-6 py-4 whitespace-nowrap text-gray-900">--</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Purchased Date</td>
+              <td id="reportPurchasedDate" class="px-6 py-4 whitespace-nowrap text-gray-900">--</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap font-semibold text-gray-700">Latest Sensor Date</td>
+              <td id="reportLatestDate" class="px-6 py-4 whitespace-nowrap text-gray-900">--</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Global meter number variable -->
+  <script>
+    const meterNumber = "{{ meter_number }}";
+  </script>
+  <!-- External JavaScript for real-time updates -->
+  <script src="{{ url_for('static', filename='port_report.js') }}"></script>
+</body>
+</html>

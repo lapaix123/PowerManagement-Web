@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Interface Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="w-[480px] h-[320px] bg-gray-100 border rounded-xl overflow-hidden mx-auto mt-10">
+    <!-- Top Bar -->
+    <div class="h-1/4 w-full bg-blue-600 flex items-center justify-between px-4 text-white">
+      <div class="flex gap-2">
+        <button onclick="goHome()" class="bg-white text-blue-600 px-2 py-1 rounded">Home</button>
+        <button onclick="goEnroll()" class="bg-white text-blue-600 px-2 py-1 rounded">Enroll</button>
+        <button onclick="goSync()" class="bg-white text-blue-600 px-2 py-1 rounded">Sync</button>
+      </div>
+      <div id="status-circle" class="w-4 h-4 rounded-full bg-gray-300"></div>
+    </div>
+
+    <!-- Content Pages -->
+    <div id="content-area" class="h-3/4 w-full flex"></div>
+  </div>
+
+  <script>
+    function goHome() {
+      document.getElementById('content-area').innerHTML = `
+        <div class=\"h-full w-full flex\">
+          <div class=\"w-2/3 flex flex-col items-center justify-center gap-4\">
+            <button onclick=\"handleHomeAction('success')\" class=\"w-24 h-12 text-white bg-green-500 rounded-2xl shadow-lg\">Success</button>
+            <button onclick=\"handleHomeAction('failed')\" class=\"w-24 h-12 text-white bg-red-500 rounded-2xl shadow-lg\">Failed</button>
+          </div>
+          <div class=\"w-1/3 bg-gray-200 flex flex-col items-center justify-center text-center p-4 rounded-l-3xl\" id=\"result-display\">
+            <div class=\"text-6xl text-gray-500\">👤</div>
+          </div>
+        </div>`;
+    }
+
+    function handleHomeAction(status) {
+      let icon = status === 'success' ? '✅' : '❌';
+      let textColor = status === 'success' ? 'text-green-600' : 'text-red-600';
+      document.getElementById('result-display').innerHTML = `
+        <div class=\"flex flex-col items-center mt-4\">
+          <div class=\"text-4xl\">${icon}</div>
+          <span class=\"${textColor} mt-2\">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+        </div>`;
+
+      document.getElementById('status-circle').className = `w-4 h-4 rounded-full ${status === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+
+      setTimeout(goHome, 500);
+    }
+
+    function goEnroll() {
+      document.getElementById('content-area').innerHTML = `
+        <div class=\"h-full w-full flex\">
+          <div class=\"w-2/3 flex flex-col items-center justify-center gap-4\">
+            <button onclick=\"startEnrollment()\" class=\"w-32 h-12 bg-blue-500 text-white rounded-2xl shadow-lg\">Enroll</button>
+          </div>
+          <div class=\"w-1/3 bg-gray-200 flex flex-col items-center justify-center text-center p-4 rounded-l-3xl\" id=\"enroll-result\">
+            <div class=\"text-6xl text-gray-500\">👤</div>
+          </div>
+        </div>`;
+    }
+
+    function startEnrollment() {
+      const result = Math.random() > 0.3 ? 'success' : 'failed';
+      let icon = result === 'success' ? '✅' : '❌';
+      let textColor = result === 'success' ? 'text-green-600' : 'text-red-600';
+
+      document.getElementById('enroll-result').innerHTML = `
+        <div class=\"flex flex-col items-center mt-4\">
+          <div class=\"text-4xl\">${icon}</div>
+          <span class=\"${textColor} mt-2\">${result.charAt(0).toUpperCase() + result.slice(1)}</span>
+        </div>`;
+
+      document.getElementById('status-circle').className = `w-4 h-4 rounded-full ${result === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+
+      setTimeout(goEnroll, 500);
+    }
+
+    function goSync() {
+      document.getElementById('content-area').innerHTML = `
+        <div class=\"w-full h-full flex flex-col items-center justify-center gap-4\">
+          <span class=\"text-xl text-gray-700\">Syncing...</span>
+          <div class=\"w-2/3 bg-gray-300 rounded-full h-4 overflow-hidden\">
+            <div id=\"progress-bar\" class=\"h-full bg-blue-500 w-0 transition-all\"></div>
+          </div>
+          <div id=\"sync-result\" class=\"mt-4\"></div>
+        </div>`;
+
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        document.getElementById('progress-bar').style.width = progress + '%';
+
+        if (progress >= 100) {
+          clearInterval(interval);
+          document.getElementById('sync-result').innerHTML = `
+            <div class=\"text-green-600 text-4xl\">✅</div>
+            <div class=\"mt-2\">Sync Completed</div>`;
+
+          setTimeout(() => {
+            document.getElementById('sync-result').innerHTML = `
+              <div>Success: 90%</div>
+              <div>Failed: 10%</div>`;
+          }, 3000);
+        }
+      }, 300);
+    }
+
+    goHome();
+  </script>
+</body>
+</html>

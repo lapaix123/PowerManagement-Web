@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cash Power Home</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto mt-8">
+    <h1 class="text-3xl font-bold mb-4">Welcome to the Cash Power System</h1>
+    
+    <a href="{{ url_for('login') }}"
+       class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+      Login
+    </a>
+    <a href="{{ url_for('register') }}"
+       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2">
+      Register
+    </a>
+    <!-- Admin Dashboard Link -->
+    <a href="{{ url_for('admin_dashboard') }}"
+       class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded ml-2">
+      Admin Dashboard
+    </a>
+    
+  </div>
+</body>
+</html>

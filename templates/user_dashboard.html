@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Dashboard - {{ user.username }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Times New Roman', serif; }
+    /* Toast container styles */
+    #toastContainer {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+    }
+    .toast {
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 5px;
+      color: white;
+      font-weight: bold;
+      opacity: 0.95;
+    }
+    #currentPowerDisplay {
+  transition: color 0.3s ease;
+}
+
+  </style>
+</head>
+<body class="bg-gray-100">
+  <!-- Header with Relay Control Buttons -->
+  <div class="p-4 bg-blue-600 text-white flex justify-between items-center">
+    <div class="flex items-center space-x-4">
+      <h1 class="text-2xl">User Dashboard</h1>
+      <!-- Relay control buttons in their own container -->
+      <div class="flex space-x-2">
+        <button id="relayOnButton" class="bg-green-500 text-white px-3 py-1 rounded">Relay ON</button>
+        <button id="relayOffButton" class="bg-yellow-500 text-white px-3 py-1 rounded">Relay OFF</button>
+      </div>
+    </div>
+    <div class="mt-4">
+      <a href="{{ url_for('api_port_report', meter_number=user.meter_number) }}" class="bg-violet-500 text-white px-4 py-2 rounded">
+        View Report
+    </a>
+    </div>
+    
+    <a href="{{ url_for('logout') }}" class="bg-white text-red-600 px-3 py-1 rounded">Logout</a>
+  </div>
+
+  <div class="container mx-auto mt-6">
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-2 text-{{ category }}-600">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Two Column Layout -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Left Column: Power Display -->
+      <div class="bg-white shadow rounded p-4 flex flex-col items-center">
+        <h2 class="text-lg font-bold mb-4">Hello, {{ user.username }}</h2>
+        <!-- Big Square Display for Current Power -->
+        <div class="w-64 h-64 border-4 border-blue-500 flex flex-col justify-center items-center">
+          <!-- id used by JavaScript for auto-updating power -->
+          <span id="currentPowerDisplay" class="text-5xl font-bold">{{ user.current_power }} W</span>
+          <span class="text-xl font-bold mt-2">Current Power</span>
+        </div>
+        {% if meter_data %}
+          <p class="mt-4 text-center">
+            Latest Reading:
+            Voltage: {{ meter_data.voltage }} V,
+            Current: {{ meter_data.current }} A,
+            Power Consumed: {{ meter_data.power }} W,
+            Time: {{ meter_data.reading_time }}
+          </p>
+        {% else %}
+          <p class="mt-4 text-center">No recent sensor data found for your meter.</p>
+        {% endif %}
+        <!-- Refresh Button -->
+        <button id="refreshBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">
+          Refresh Data
+        </button>
+        <div id="ajaxResult" class="mt-2 text-gray-700"></div>
+      </div>
+
+      <!-- Right Column: Buy Electricity Form -->
+      <div class="bg-white shadow rounded p-4">
+        <h2 class="text-lg font-bold mb-4">Buy Electricity</h2>
+        <form method="POST" action="{{ url_for('user_buy_electricity') }}" id="buyElectricityForm">
+          <div class="mb-4">
+            <label class="block mb-1 font-semibold">Buy For</label>
+            <select name="buy_for" id="buy_for" class="border p-2 w-full">
+              <option value="self">Myself</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="mb-4" id="amountDiv">
+            <label class="block mb-1 font-semibold">Amount (Currency)</label> required
+            <input type="number" step="0.01" name="amount" class="border p-2 w-full" required>
+          </div>
+          <!-- Other Meter Input: initially hidden; note no "required" attribute by default -->
+          <div class="mb-4 hidden" id="otherMeterDiv">
+            <label class="block mb-1 font-semibold">Other's Meter Number</label>
+            <input type="text" name="other_meter_number" id="other_meter_number" class="border p-2 w-full">
+            <div id="meterFeedback" class="text-sm mt-1"></div>
+          </div>
+          <button type="submit" id="buyButton" class="bg-green-500 text-white px-4 py-2 rounded w-full">
+            Buy Electricity
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toastContainer"></div>
+
+  <!-- Define global meterNumber variable from Flask -->
+  <script>
+    const meterNumber = "{{ user.meter_number }}";
+
+    // Show toast notifications
+    function showToast(message, type) {
+      const toast = document.createElement('div');
+      toast.classList.add('toast', `bg-${type}-500`);
+      toast.innerText = message;
+
+      const toastContainer = document.getElementById('toastContainer');
+      toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.remove();
+      }, 3000); // Hide toast after 3 seconds
+    }
+
+    // Relay control button event handlers
+    document.getElementById('relayOnButton').addEventListener('click', function() {
+      fetch(`/api/relay_control`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meter_number: meterNumber, state: 'on' }),
+      }).then(response => {
+        if (response.ok) {
+          showToast('Relay is ON', 'green');
+        } else {
+          showToast('Failed to turn on relay', 'red');
+        }
+      });
+    });
+
+    document.getElementById('relayOffButton').addEventListener('click', function() {
+      fetch(`/api/relay_control`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ meter_number: meterNumber, state: 'off' }),
+      }).then(response => {
+        if (response.ok) {
+          showToast('Relay is OFF', 'red');
+        } else {
+          showToast('Failed to turn off relay', 'red');
+        }
+      });
+    });
+
+    // Handle dynamic form fields
+    const buyForSelect = document.getElementById('buy_for');
+    const otherMeterDiv = document.getElementById('otherMeterDiv');
+
+    buyForSelect.addEventListener('change', function() {
+      if (this.value === 'other') {
+        otherMeterDiv.classList.remove('hidden');
+      } else {
+        otherMeterDiv.classList.add('hidden');
+      }
+    });
+    function animatePowerUpdate() {
+  const el = document.getElementById('currentPowerDisplay');
+  el.classList.add('text-green-500');
+  setTimeout(() => el.classList.remove('text-green-500'), 500);
+}
+
+function fetchPowerData() {
+  fetch(`/api/current_power/${meterNumber}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.current_power) {
+        document.getElementById('currentPowerDisplay').innerText = `${data.current_power} W`;
+        animatePowerUpdate();
+        checkPowerCondition(data.current_power);
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching power data:', error);
+    });
+}
+fetchPowerData();
+setInterval(fetchPowerData, 1000);
+
+
+  </script>
+  <!-- Load external JavaScript -->
+  <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

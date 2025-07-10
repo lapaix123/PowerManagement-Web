@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div class="p-4 flex justify-between items-center bg-blue-600 text-white">
+    <h1 class="text-2xl">Admin Dashboard</h1>
+    <div class="flex flex-wrap items-center justify-center space-x-4">
+      <a href="{{ url_for('admin_view_meter') }}"
+         class="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-green-600 hover:text-white transition ease-in-out duration-300">
+        View Meter
+      </a>
+      <a href="{{ url_for('admin_buy_electricity') }}"
+         class="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-green-600 hover:text-white transition ease-in-out duration-300">
+        Buy Electricity
+      </a>
+      <a href="{{ url_for('admin_users_page') }}"
+         class="bg-white text-blue-600 px-4 py-2 rounded shadow hover:bg-green-600 hover:text-white transition ease-in-out duration-300">
+        Admin Users
+      </a>
+      <a href="{{ url_for('logout') }}"
+         class="bg-white text-red-600 px-4 py-2 rounded shadow hover:bg-red-600 hover:text-white transition ease-in-out duration-300">
+        Logout
+      </a>
+    </div>
+  </div>
+  
+  <div class="container mx-auto mt-6">
+    <h2 class="text-xl font-bold mb-4">All Users</h2>
+    <table class="table-auto w-full border">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2">ID</th>
+          <th class="px-4 py-2">Username</th>
+          <th class="px-4 py-2">Meter</th>
+          <th class="px-4 py-2">Current Power (W)</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody">
+        {% for u in users %}
+        <tr>
+          <td class="border px-4 py-2">{{ u.id }}</td>
+          <td class="border px-4 py-2">{{ u.username }}</td>
+          <td class="border px-4 py-2">{{ u.meter_number }}</td>
+          <td class="border px-4 py-2">{{ u.current_power }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <script>
+    // Function to update the table using AJAX
+    function updateUserTable() {
+      fetch('/admin/api/users?search=')
+        .then(response => response.json())
+        .then(data => {
+          let tbody = document.getElementById('usersTableBody');
+          let html = '';
+          data.forEach(user => {
+            html += `
+              <tr>
+                <td class="border px-4 py-2">${user.id}</td>
+                <td class="border px-4 py-2">${user.username}</td>
+                <td class="border px-4 py-2">${user.meter_number}</td>
+                <td class="border px-4 py-2">${user.current_power}</td>
+              </tr>
+            `;
+          });
+          tbody.innerHTML = html;
+        })
+        .catch(error => {
+          console.error('Error updating user table:', error);
+        });
+    }
+    
+    // Update the table every 5 seconds (5000 milliseconds)
+    setInterval(updateUserTable, 1000);
+    
+    // Optionally, call it once on page load
+    updateUserTable();
+  </script>
+</body>
+</html>

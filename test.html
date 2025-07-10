@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screen Interface Test with Animation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { touch-action: manipulation; }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="w-[480px] h-[320px] bg-gray-100 border rounded-xl overflow-hidden mx-auto mt-10 select-none">
+    <div class="h-1/4 w-full bg-blue-600 flex items-center justify-between px-4 text-white">
+      <div class="flex gap-2">
+        <button onclick="goHome()" class="bg-white text-blue-600 px-2 py-1 rounded">Home</button>
+        <button onclick="goEnroll()" class="bg-white text-blue-600 px-2 py-1 rounded">Enroll</button>
+        <button onclick="goSync()" class="bg-white text-blue-600 px-2 py-1 rounded">Sync</button>
+        <button onclick="goSettings()" class="bg-white text-blue-600 px-2 py-1 rounded">Settings</button>
+      </div>
+      <div id="status-circle" class="w-4 h-4 rounded-full bg-gray-300"></div>
+    </div>
+
+    <div id="content-area" class="h-3/4 w-full flex fade-in"></div>
+  </div>
+
+  <script>
+    function vibrateDevice(duration) {
+      if (navigator.vibrate) {
+        navigator.vibrate(duration);
+      }
+    }
+
+    function fadeContent(content) {
+      const contentArea = document.getElementById('content-area');
+      contentArea.classList.remove('fade-in');
+      void contentArea.offsetWidth;
+      contentArea.innerHTML = content;
+      contentArea.classList.add('fade-in');
+    }
+
+    function goHome() {
+      fadeContent(`
+        <div class="h-full w-full flex">
+          <div class="w-2/3 flex flex-col items-center justify-center gap-4">
+            <button ontouchstart="handleHomeAction('success')" class="w-24 h-12 text-white bg-green-500 rounded-2xl shadow-lg">Success</button>
+            <button ontouchstart="handleHomeAction('failed')" class="w-24 h-12 text-white bg-red-500 rounded-2xl shadow-lg">Failed</button>
+          </div>
+          <div class="w-1/3 bg-gray-200 flex flex-col items-center justify-center text-center p-4 rounded-l-3xl" id="result-display">
+            <div class="text-6xl text-gray-500">👤</div>
+          </div>
+        </div>`);
+    }
+
+    function handleHomeAction(status) {
+      vibrateDevice(100);
+      let icon = status === 'success' ? '✅' : '❌';
+      let textColor = status === 'success' ? 'text-green-600' : 'text-red-600';
+      document.getElementById('result-display').innerHTML = `
+        <div class="flex flex-col items-center mt-4 fade-in">
+          <div class="text-4xl">${icon}</div>
+          <span class="${textColor} mt-2">${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+        </div>`;
+
+      document.getElementById('status-circle').className = `w-4 h-4 rounded-full ${status === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+
+      setTimeout(goHome, 3000);
+    }
+
+    function goEnroll() {
+      fadeContent(`
+        <div class="h-full w-full flex">
+          <div class="w-2/3 flex flex-col items-center justify-center gap-4">
+            <button ontouchstart="startEnrollment()" class="w-32 h-12 bg-blue-500 text-white rounded-2xl shadow-lg">Enroll</button>
+          </div>
+          <div class="w-1/3 bg-gray-200 flex flex-col items-center justify-center text-center p-4 rounded-l-3xl" id="enroll-result">
+            <div class="text-6xl text-gray-500">👤</div>
+          </div>
+        </div>`);
+    }
+
+    function startEnrollment() {
+      vibrateDevice(150);
+      const result = Math.random() > 0.3 ? 'success' : 'failed';
+      let icon = result === 'success' ? '✅' : '❌';
+      let textColor = result === 'success' ? 'text-green-600' : 'text-red-600';
+
+      document.getElementById('enroll-result').innerHTML = `
+        <div class="flex flex-col items-center mt-4 fade-in">
+          <div class="text-4xl">${icon}</div>
+          <span class="${textColor} mt-2">${result.charAt(0).toUpperCase() + result.slice(1)}</span>
+        </div>`;
+
+      document.getElementById('status-circle').className = `w-4 h-4 rounded-full ${result === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+
+      setTimeout(goEnroll, 3000);
+    }
+
+    function goSync() {
+      fadeContent(`
+        <div class="w-full h-full flex flex-col items-center justify-center gap-4">
+          <span class="text-xl text-gray-700">Syncing...</span>
+          <div class="w-2/3 bg-gray-300 rounded-full h-4 overflow-hidden">
+            <div id="progress-bar" class="h-full bg-blue-500 w-0 transition-all"></div>
+          </div>
+          <div id="sync-result" class="mt-4"></div>
+        </div>`);
+
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 10;
+        document.getElementById('progress-bar').style.width = progress + '%';
+
+        if (progress >= 100) {
+          clearInterval(interval);
+          vibrateDevice(200);
+          document.getElementById('sync-result').innerHTML = `
+            <div class="text-green-600 text-4xl fade-in">✅</div>
+            <div class="mt-2 fade-in">Sync Completed</div>`;
+
+          setTimeout(() => {
+            document.getElementById('sync-result').innerHTML = `
+              <div>Success: 90%</div>
+              <div>Failed: 10%</div>`;
+          }, 3000);
+        }
+      }, 300);
+    }
+
+    function goSettings() {
+      fadeContent(`
+        <div class="h-full w-full flex flex-col items-center justify-center gap-4 p-4">
+          <label class="w-full text-gray-700">Change IP Address:</label>
+          <input type="text" id="ipAddressInput" placeholder="Enter IP Address" class="w-full border p-2 rounded" />
+          <button onclick="saveSettings()" class="w-full bg-blue-500 text-white rounded-2xl shadow-lg py-2">Save</button>
+          <div id="settings-status" class="mt-4 text-green-600"></div>
+        </div>`);
+    }
+
+    function saveSettings() {
+      vibrateDevice(100);
+      const ipAddress = document.getElementById('ipAddressInput').value;
+      if (ipAddress) {
+        document.getElementById('settings-status').textContent = `Saved IP: ${ipAddress}`;
+        document.getElementById('status-circle').className = `w-4 h-4 rounded-full bg-green-500`;
+      } else {
+        document.getElementById('settings-status').textContent = `Please enter a valid IP address.`;
+        document.getElementById('status-circle').className = `w-4 h-4 rounded-full bg-red-500`;
+      }
+
+      setTimeout(() => {
+        document.getElementById('settings-status').textContent = '';
+      }, 3000);
+    }
+
+    goHome();
+  </script>
+</body>
+</html>

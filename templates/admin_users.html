@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Users</title>
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+  <!-- Top Bar -->
+  <header class="bg-blue-600 text-white p-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold">Admin Dashboard</h1>
+    <nav>
+      <a href="#" class="mr-4 hover:underline">Home</a>
+      <a href="#" class="mr-4 hover:underline">Buy Electricity</a>
+      <!-- Add additional admin links as needed -->
+      <a href="/logout" class="hover:underline text-red-200">Logout</a>
+    </nav>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-grow container mx-auto py-6">
+    <!-- Search Filter -->
+    <div class="flex items-center mb-4">
+      <label for="searchInput" class="mr-2 font-semibold">Search:</label>
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Type username or meter number..."
+        class="border p-2 rounded w-64 focus:outline-none focus:ring"
+      />
+    </div>
+
+    <!-- Table Container -->
+    <div class="overflow-x-auto bg-white rounded shadow">
+      <table class="min-w-full text-left" id="usersTable">
+        <thead class="bg-gray-200">
+          <tr>
+            <th class="p-2">ID</th>
+            <th class="p-2">Username</th>
+            <th class="p-2">Meter Number</th>
+            <th class="p-2">Province</th>
+            <th class="p-2">District</th>
+            <th class="p-2">Sector</th>
+            <th class="p-2">Current Power (W)</th>
+            <th class="p-2">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="usersTbody">
+          <!-- Rows will be dynamically inserted here via JS -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <script>
+    // ------------------------------------
+    // 1) Global Variables & Setup
+    // ------------------------------------
+    const searchInput = document.getElementById('searchInput');
+    const usersTbody = document.getElementById('usersTbody');
+    let isEditingRow = null; // track which row is currently in edit mode (if any)
+
+    // List of possible provinces for the dropdown
+    const PROVINCES = ["Eastern", "Western", "Northern", "Southern", "Kigali"];
+
+    // ------------------------------------
+    // 2) Fetch Users from Server
+    // ------------------------------------
+    async function loadUsers(query = "") {
+      try {
+        // Example endpoint: /admin/api/users?search=...
+        // Adjust the URL to match your actual Flask route
+        const res = await fetch(`/admin/api/users?search=${encodeURIComponent(query)}`);
+        if (!res.ok) {
+          console.error("Failed to fetch users");
+          return;
+        }
+        const data = await res.json();
+        renderUsers(data);
+      } catch (err) {
+        console.error("Error loading users:", err);
+      }
+    }
+
+    // ------------------------------------
+    // 3) Render Table Rows
+    // ------------------------------------
+    function renderUsers(userList) {
+      // If we're editing a row, we might want to preserve that. 
+      // For simplicity, we'll just exit edit mode if the table reloads.
+      isEditingRow = null; 
+      usersTbody.innerHTML = "";
+
+      userList.forEach(user => {
+        // Create table row
+        const tr = document.createElement('tr');
+        tr.className = "border-b";
+
+        // ID (read-only)
+        const tdId = document.createElement('td');
+        tdId.className = "p-2";
+        tdId.textContent = user.id;
+        tr.appendChild(tdId);
+
+        // Username
+        const tdUsername = document.createElement('td');
+        tdUsername.className = "p-2";
+        tdUsername.textContent = user.username;
+        tr.appendChild(tdUsername);
+
+        // Meter Number
+        const tdMeter = document.createElement('td');
+        tdMeter.className = "p-2";
+        tdMeter.textContent = user.meter_number;
+        tr.appendChild(tdMeter);
+
+        // Province
+        const tdProvince = document.createElement('td');
+        tdProvince.className = "p-2";
+        tdProvince.textContent = user.province;
+        tr.appendChild(tdProvince);
+
+        // District
+        const tdDistrict = document.createElement('td');
+        tdDistrict.className = "p-2";
+        tdDistrict.textContent = user.district;
+        tr.appendChild(tdDistrict);
+
+        // Sector
+        const tdSector = document.createElement('td');
+        tdSector.className = "p-2";
+        tdSector.textContent = user.sector;
+        tr.appendChild(tdSector);
+
+        // Current Power
+        const tdPower = document.createElement('td');
+        tdPower.className = "p-2";
+        tdPower.textContent = user.current_power;
+        tr.appendChild(tdPower);
+
+        // Actions
+        const tdActions = document.createElement('td');
+        tdActions.className = "p-2 flex items-center space-x-2";
+
+        // "Edit" Button
+        const editBtn = document.createElement('button');
+        editBtn.textContent = "Edit";
+        editBtn.className = "bg-yellow-400 text-white px-2 py-1 rounded hover:bg-yellow-500";
+        editBtn.addEventListener('click', () => enableEditMode(tr, user));
+        tdActions.appendChild(editBtn);
+
+        // "Delete" Button
+        const delBtn = document.createElement('button');
+        delBtn.textContent = "Delete";
+        delBtn.className = "bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600";
+        delBtn.addEventListener('click', () => deleteUser(user.id));
+        tdActions.appendChild(delBtn);
+
+        tr.appendChild(tdActions);
+
+        usersTbody.appendChild(tr);
+      });
+    }
+
+    // ------------------------------------
+    // 4) Enable Edit Mode
+    // ------------------------------------
+    function enableEditMode(tr, user) {
+      if (isEditingRow) {
+        // If we're already editing another row, we can either confirm/cancel first
+        alert("Finish editing the current row first.");
+        return;
+      }
+      isEditingRow = user.id; // track which user is being edited
+
+      // Convert each cell (except ID) into an input or select
+      const tds = tr.querySelectorAll('td');
+      const [tdId, tdUsername, tdMeter, tdProvince, tdDistrict, tdSector, tdPower, tdActions] = tds;
+
+      // Save original values so we can restore if "Cancel"
+      const original = {
+        username: tdUsername.textContent,
+        meter_number: tdMeter.textContent,
+        province: tdProvince.textContent,
+        district: tdDistrict.textContent,
+        sector: tdSector.textContent,
+        current_power: tdPower.textContent
+      };
+
+      // Username (input)
+      tdUsername.innerHTML = "";
+      const usernameInput = document.createElement('input');
+      usernameInput.type = "text";
+      usernameInput.value = original.username;
+      usernameInput.className = "border p-1 w-full rounded";
+      tdUsername.appendChild(usernameInput);
+
+      // Meter Number (input)
+      tdMeter.innerHTML = "";
+      const meterInput = document.createElement('input');
+      meterInput.type = "text";
+      meterInput.value = original.meter_number;
+      meterInput.className = "border p-1 w-full rounded";
+      tdMeter.appendChild(meterInput);
+
+      // Province (select)
+      tdProvince.innerHTML = "";
+      const provinceSelect = document.createElement('select');
+      provinceSelect.className = "border p-1 w-full rounded";
+      PROVINCES.forEach((prov) => {
+        const opt = document.createElement('option');
+        opt.value = prov;
+        opt.textContent = prov;
+        if (prov === original.province) {
+          opt.selected = true;
+        }
+        provinceSelect.appendChild(opt);
+      });
+      tdProvince.appendChild(provinceSelect);
+
+      // District (input)
+      tdDistrict.innerHTML = "";
+      const districtInput = document.createElement('input');
+      districtInput.type = "text";
+      districtInput.value = original.district;
+      districtInput.className = "border p-1 w-full rounded";
+      tdDistrict.appendChild(districtInput);
+
+      // Sector (input)
+      tdSector.innerHTML = "";
+      const sectorInput = document.createElement('input');
+      sectorInput.type = "text";
+      sectorInput.value = original.sector;
+      sectorInput.className = "border p-1 w-full rounded";
+      tdSector.appendChild(sectorInput);
+
+      // Current Power (input)
+      tdPower.innerHTML = "";
+      const powerInput = document.createElement('input');
+      powerInput.type = "number";
+      powerInput.step = "0.01";
+      powerInput.value = original.current_power;
+      powerInput.className = "border p-1 w-full rounded";
+      tdPower.appendChild(powerInput);
+
+      // Replace the action buttons with "Save" / "Cancel"
+      tdActions.innerHTML = "";
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = "Save";
+      saveBtn.className = "bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 mr-2";
+      saveBtn.addEventListener('click', () => {
+        saveChanges(user.id, {
+          username: usernameInput.value,
+          meter_number: meterInput.value,
+          province: provinceSelect.value,
+          district: districtInput.value,
+          sector: sectorInput.value,
+          current_power: powerInput.value
+        });
+      });
+      tdActions.appendChild(saveBtn);
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.className = "bg-gray-400 text-white px-2 py-1 rounded hover:bg-gray-500";
+      cancelBtn.addEventListener('click', () => {
+        // restore original text & revert to normal
+        tdUsername.textContent = original.username;
+        tdMeter.textContent = original.meter_number;
+        tdProvince.textContent = original.province;
+        tdDistrict.textContent = original.district;
+        tdSector.textContent = original.sector;
+        tdPower.textContent = original.current_power;
+        tdActions.innerHTML = "";
+        // Re-add Edit & Delete
+        const editBtn = document.createElement('button');
+        editBtn.textContent = "Edit";
+        editBtn.className = "bg-yellow-400 text-white px-2 py-1 rounded hover:bg-yellow-500 mr-2";
+        editBtn.addEventListener('click', () => enableEditMode(tr, user));
+        tdActions.appendChild(editBtn);
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = "Delete";
+        delBtn.className = "bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600";
+        delBtn.addEventListener('click', () => deleteUser(user.id));
+        tdActions.appendChild(delBtn);
+
+        isEditingRow = null;
+      });
+      tdActions.appendChild(cancelBtn);
+    }
+
+    // ------------------------------------
+    // 5) Save Changes (AJAX)
+    // ------------------------------------
+    async function saveChanges(userId, updatedData) {
+      try {
+        const res = await fetch(`/admin/api/users/${userId}/update`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(updatedData)
+        });
+        if (!res.ok) {
+          alert("Failed to save changes.");
+          return;
+        }
+        const result = await res.json();
+        if (result.success) {
+          // Reload the table
+          await loadUsers(searchInput.value);
+        } else {
+          alert("Update failed on server side.");
+        }
+      } catch (err) {
+        console.error("Error saving changes:", err);
+      } finally {
+        isEditingRow = null;
+      }
+    }
+
+    // ------------------------------------
+    // 6) Delete User (AJAX)
+    // ------------------------------------
+    async function deleteUser(userId) {
+      if (!confirm("Are you sure you want to delete this user?")) {
+        return;
+      }
+      try {
+        const res = await fetch(`/admin/api/users/${userId}/delete`, {
+          method: "DELETE"
+        });
+        if (!res.ok) {
+          alert("Failed to delete user.");
+          return;
+        }
+        const result = await res.json();
+        if (result.success) {
+          // Reload the table
+          await loadUsers(searchInput.value);
+        } else {
+          alert("Delete failed on server side.");
+        }
+      } catch (err) {
+        console.error("Error deleting user:", err);
+      }
+    }
+
+    // ------------------------------------
+    // 7) Real-Time Search
+    // ------------------------------------
+    // For each keystroke in the search box, we’ll reload the table with matching users
+    let searchTimeout = null;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        loadUsers(searchInput.value);
+      }, 300); // small debounce
+    });
+
+    // ------------------------------------
+    // 8) Auto-Refresh Table (Optional)
+    // ------------------------------------
+    // If you want the table to refresh every X seconds, uncomment below:
+    /*
+    setInterval(() => {
+      if (!isEditingRow) {
+        loadUsers(searchInput.value);
+      }
+    }, 5000); // every 5 seconds
+    */
+
+    // ------------------------------------
+    // 9) Initial Load
+    // ------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      loadUsers("");
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+#include <Wire.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <Adafruit_INA219.h>
+#include <U8g2lib.h>
+#include <ArduinoJson.h>
+
+// WiFi credentials
+const char* ssid = "Smart4G-835C";
+const char* password = "12345678";
+
+// MQTT broker settings
+const char* mqtt_server = "172.16.0.124";
+const uint16_t mqtt_port = 1883;
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+// Create a separate TwoWire instance for INA219 (ESP32 supports multiple I2C buses)
+TwoWire I2Cina219(1);
+
+// Create the OLED object on its own I²C bus (custom pins: SDA=18, SCL=19)
+U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, U8X8_PIN_NONE, 19, 18);
+
+Adafruit_INA219 ina219;  // INA219 sensor
+
+// Define Relay pin
+const int relayPin = 23;
+const int greenLED = 12;
+const int redLED = 13;
+const int buzzer = 4;
+// Global meter number (change as required)
+String meterNumber = "W003400340001";
+
+// Variables for sensor reading and energy accumulation
+unsigned long lastDataTime = 0;
+unsigned long lastHeartbeatTime = 0;
+float energy_mWh = 0;  // in mWh
+
+// Global variable for remaining power from server (in Watts)
+float remainingPowerFromServer = 0;
+
+// Global variables for toast notifications (timing in milliseconds)
+unsigned long lastRedToastTime = 0;
+unsigned long lastYellowToastTime = 0;
+unsigned long lastToastTrigger = 0;
+bool showingToast = false;
+unsigned long toastStartTime = 0;
+String toastMessage = "";
+unsigned long lastBuzzerTime = 0;
+
+//-----------------------------------------
+// MQTT Callback Function
+//-----------------------------------------
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message = "";
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  Serial.print("MQTT Message received on topic ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(message);
+
+  // Use the topic "power/update" for remaining power updates
+  if (String(topic) == "power/update") {
+    // Expected payload: {"meter_number": "W003400340001", "remaining_power": 13.0}
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, message);
+    if (!error) {
+      String recvMeter = doc["meter_number"].as<String>();
+      if (recvMeter == meterNumber) {
+        remainingPowerFromServer = doc["remaining_power"].as<float>();
+        // Reset energy tracking when power updates
+        energy_mWh = 0;
+        Serial.print("Updated remaining power from MQTT: ");
+        Serial.println(remainingPowerFromServer);
+        // Auto-control relay based on remaining power:
+        if (remainingPowerFromServer <= 0) {
+          digitalWrite(relayPin, LOW);
+          Serial.println("Power depleted! Relay forced OFF.");
+        } else {
+          digitalWrite(relayPin, HIGH);
+          Serial.println("Power available, relay automatically turned ON.");
+        }
+      }
+    } else {
+      Serial.print("JSON parse error on power update: ");
+      Serial.println(error.c_str());
+    }
+  }
+  if (topicStr == "relay/control") {
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, message);
+    if (error) {
+      Serial.print("deserializeJson() failed: ");
+      Serial.println(error.f_str());
+      return;
+    }
+
+    String recvMeter = doc["meter_number"].as<String>();
+    String command = doc["command"].as<String>(); // "on" or "off"
+
+    if (recvMeter == meterNumber) {
+      // Only turn on the relay if there is power greater than 0
+      if (remainingPowerFromServer > 0) {
+        if (command == "on") {
+          digitalWrite(relayPin, LOW);  // Assuming LOW turns the relay ON
+          Serial.println("Relay turned ON via MQTT.");
+        } else if (command == "off") {
+          digitalWrite(relayPin, HIGH); // Assuming HIGH turns the relay OFF
+          Serial.println("Relay turned OFF via MQTT.");
+        }
+      } else {
+        Serial.println("Relay cannot be turned ON, power is 0.");
+      }
+    }
+  }// (Other topics can be handled here if needed)
+}
+
+//-----------------------------------------
+// Publish Sensor Data Function
+//-----------------------------------------
+void publishSensorData(float voltage, float current, float powerConsumed) {
+  powerConsumed /= 1000.0;  
+  String payload = "{";
+  payload += "\"meter_number\":\"" + meterNumber + "\",";
+  payload += "\"voltage\":" + String(voltage, 2) + ",";
+  payload += "\"current\":" + String(current, 2) + ",";
+  payload += "\"power_consumed\":" + String(powerConsumed, 2);
+  payload += "}";
+  
+  client.publish("power/monitor", payload.c_str());
+  Serial.println("Published: " + payload);
+}
+
+//-----------------------------------------
+// WiFi connection function with progress bar
+//-----------------------------------------
+void setup_wifi() {
+  Serial.print("Connecting to WiFi: ");
+  Serial.println(ssid);
+  
+  WiFi.begin(ssid, password);
+  
+  int progress = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_ncenB14_tr);
+    u8g2.setCursor(0, 15);
+    u8g2.print("Connecting to WiFi");
+    
+    int barWidth = 100;
+    int fillWidth = progress % (barWidth + 1);
+    int barX = (128 - barWidth) / 2;
+    int barY = 25;
+    u8g2.drawFrame(barX, barY, barWidth, 10);
+    u8g2.drawBox(barX, barY, fillWidth, 10);
+    u8g2.sendBuffer();
+    
+    progress += 10;
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected!");
+  
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB14_tr);
+  u8g2.setCursor(0, 15);
+  u8g2.print("WiFi Connected");
+  u8g2.setCursor(0, 30);
+  u8g2.print(WiFi.localIP().toString());
+  u8g2.sendBuffer();
+  delay(2000);
+  u8g2.clearBuffer();
+}
+
+//-----------------------------------------
+// MQTT reconnect function
+//-----------------------------------------
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    if (client.connect("ESP32PowerMonitor")) {
+      Serial.println("Connected to MQTT broker");
+      // Subscribe to the topic for remaining power updates
+      client.subscribe("power/update");
+      
+      u8g2.clearBuffer();
+      u8g2.setFont(u8g2_font_ncenB14_tr);
+      u8g2.setCursor(0, 15);
+      u8g2.print("MQTT Connected");
+      u8g2.sendBuffer();
+      delay(1500);
+      u8g2.clearBuffer();
+    } else {
+      Serial.print("Failed, rc=");
+      Serial.print(client.state());
+      Serial.println(", retrying in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+//-----------------------------------------
+// Setup function
+//-----------------------------------------
+void setup() {
+  Serial.begin(115200);
+  
+  u8g2.begin();
+  I2Cina219.begin(21, 22);
+  
+  // Set up the relay pin
+  pinMode(relayPin, OUTPUT);
+  // Ensure relay is OFF initially (assuming HIGH means OFF for your relay module)
+  digitalWrite(relayPin, HIGH);
+  
+  setup_wifi();
+  
+  client.setServer(mqtt_server, mqtt_port);
+  client.setCallback(mqttCallback);
+  
+  if (!ina219.begin(&I2Cina219)) {
+    Serial.println("Error: INA219 sensor not found");
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_ncenB14_tr);
+    u8g2.setCursor(0, 15);
+    u8g2.print("INA219 Error");
+    u8g2.sendBuffer();
+    while (1);
+  }
+  Serial.println("INA219 sensor initialized");
+  
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB14_tr);
+  u8g2.setCursor(0, 15);
+  u8g2.print("Power Monitor");
+  u8g2.sendBuffer();
+  delay(1500);
+  u8g2.clearBuffer();
+}
+
+//-----------------------------------------
+// Main loop
+//-----------------------------------------
+void loop() {
+  // Auto-reconnect WiFi if lost
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("WiFi lost! Reconnecting...");
+    WiFi.disconnect();
+    WiFi.reconnect();
+  }
+  
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  
+  unsigned long now = millis();
+  
+  // Update sensor readings every second (publishing sensor data)
+  if (now - lastDataTime >= 1000) {
+    lastDataTime = now;
+    
+    float busVoltage = ina219.getBusVoltage_V();
+    float current_mA = ina219.getCurrent_mA();
+    if (abs(current_mA) < 1.0) {  // Filter out noise (< 1 mA)
+      current_mA = 0;
+    }
+    float power_mW = ina219.getPower_mW();
+    float power_W = power_mW / 1000.0;  // Convert mW to W for display
+    energy_mWh += (power_mW / 3600.0);
+    
+    publishSensorData(busVoltage, current_mA, power_mW);
+    
+    Serial.print("Voltage: ");
+    Serial.print(busVoltage, 2);
+    Serial.print(" V, ");
+    Serial.print("Current: ");
+    Serial.print(current_mA, 2);
+    Serial.print(" mA, ");
+    Serial.print("Power: ");
+    Serial.print(power_mW, 2);
+    Serial.print(" mW, ");
+    Serial.print("Energy: ");
+    Serial.print(energy_mWh, 2);
+    Serial.println(" mWh");
+  }
+  
+  // Debug: Print remaining power from MQTT to Serial Monitor
+  Serial.print("OLED Update - Remaining Power from MQTT: ");
+  Serial.println(remainingPowerFromServer);
+  
+  // -------------------------------
+  // OLED display update logic with toast notifications
+  // -------------------------------
+  if (remainingPowerFromServer == 0.0) {
+    toastMessage = "Power is 0, please buy electricity!";
+  } else if (remainingPowerFromServer < 3.0) {
+    if (!showingToast && (now - lastToastTrigger >= 10000)) {
+      showingToast = true;
+      toastMessage = "Buy new power almost over!";
+      toastStartTime = now;
+      lastToastTrigger = now;
+    }
+    if (showingToast && (now - toastStartTime >= 2000)) {
+      showingToast = false;
+      toastMessage = "";
+    }
+  } else {
+    toastMessage = "";
+  }
+  
+  u8g2.clearBuffer();
+  if (remainingPowerFromServer == 0.0) {
+    u8g2.setFont(u8g2_font_5x7_tr);
+    u8g2.setCursor(2, 10);
+    u8g2.print("Power is 0, please");
+    u8g2.setCursor(2, 18);
+    u8g2.print("buy electricity!");
+    
+    u8g2.setFont(u8g2_font_ncenB18_tr);
+    char pVal[25];
+    snprintf(pVal, sizeof(pVal), "%.2f W", remainingPowerFromServer);
+    u8g2.setCursor(2, 50);
+    u8g2.print(pVal);
+  } else if (showingToast && toastMessage.length() > 0) {
+    u8g2.setFont(u8g2_font_5x7_tr);
+    u8g2.setCursor(2, 32);
+    u8g2.print(toastMessage);
+  } else {
+    u8g2.setFont(u8g2_font_5x7_tr);
+    char voltageStr[20];
+    snprintf(voltageStr, sizeof(voltageStr), "Vol: %.2f V", ina219.getBusVoltage_V());
+    u8g2.setCursor(2, 10);
+    u8g2.print(voltageStr);
+    
+    char energyStr[20];
+    snprintf(energyStr, sizeof(energyStr), "En: %.2f mWh", energy_mWh);
+    u8g2.setCursor(66, 10);
+    u8g2.print(energyStr);
+    
+    u8g2.drawVLine(64, 0, 16);
+    
+    u8g2.setFont(u8g2_font_5x7_tr);
+    u8g2.setCursor(2, 22);
+    u8g2.print("Power:");
+    
+    u8g2.setFont(u8g2_font_ncenB18_tr);
+    char powerVal[25];
+    snprintf(powerVal, sizeof(powerVal), "%.2f W", remainingPowerFromServer);
+    u8g2.setCursor(2, 50);
+    u8g2.print(powerVal);
+  }
+  u8g2.sendBuffer();
+  
+  // MQTT heartbeat every 5 seconds
+  unsigned long nowHeartbeat = millis();
+  if (nowHeartbeat - lastHeartbeatTime >= 5000) {
+    lastHeartbeatTime = nowHeartbeat;
+    char hb[50];
+    snprintf(hb, sizeof(hb), "{\"status\":\"online\"}");
+    client.publish("esp32/status", hb);
+    Serial.println("Heartbeat: " + String(hb));
+  }
+  
+  delay(50);
+}
