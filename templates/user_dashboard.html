@@ -24,6 +24,14 @@
     #currentPowerDisplay {
   transition: color 0.3s ease;
 }
+.blinking {
+  animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+  50% { opacity: 0; }
+}
+
 
   </style>
 </head>
@@ -185,6 +193,32 @@
   el.classList.add('text-green-500');
   setTimeout(() => el.classList.remove('text-green-500'), 500);
 }
+
+let lowPowerToastInterval = null; // Track the interval
+let isLowPowerToastShowing = false;
+
+function checkPowerCondition(power) {
+  const powerDisplay = document.getElementById('currentPowerDisplay');
+
+  if (power < 3) {
+    powerDisplay.classList.add('text-red-600', 'blinking');
+
+    if (!lowPowerToastInterval) {
+      showToast('Power is low! Please buy electricity.', 'red');
+      lowPowerToastInterval = setInterval(() => {
+        showToast('Power is low! Please buy electricity.', 'red');
+      }, 10000); // every 10 sec
+    }
+  } else {
+    powerDisplay.classList.remove('text-red-600', 'blinking');
+
+    if (lowPowerToastInterval) {
+      clearInterval(lowPowerToastInterval);
+      lowPowerToastInterval = null;
+    }
+  }
+}
+
 
 function fetchPowerData() {
   fetch(`/api/current_power/${meterNumber}`)
