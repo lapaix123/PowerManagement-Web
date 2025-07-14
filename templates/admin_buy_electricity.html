@@ -1,54 +1,344 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Admin Buy Electricity</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Buy Electricity - Cash Power System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
     body {
-      font-family: 'Times New Roman', serif;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+
+    .form-container {
+      background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      transition: all 0.3s ease;
+    }
+
+    .form-container:hover {
+      transform: translateY(-5px) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+    }
+
+    .search-container {
+      background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .pulse-animation {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .loading-spinner {
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .input-field {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .input-field:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      outline: none;
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      transform: translateY(0);
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      transform: translateY(0);
+      transition: all 0.3s ease;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .meter-feedback {
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .meter-feedback.success {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: #059669;
+    }
+
+    .meter-feedback.error {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #dc2626;
+    }
+
+    .meter-feedback.loading {
+      background: rgba(102, 126, 234, 0.1);
+      border-color: rgba(102, 126, 234, 0.3);
+      color: #667eea;
+    }
+
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .flash-message {
+      background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .currency-gradient {
+      background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    }
+
+    .purchase-gradient {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     }
   </style>
 </head>
-<body>
-  <div class="p-4 bg-blue-600 text-white flex justify-between">
-    <h1 class="text-2xl">Buy Electricity</h1>
-    <a href="{{ url_for('admin_dashboard') }}" class="bg-white text-blue-600 px-3 py-1 rounded">Back</a>
-  </div>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+  <!-- Header -->
+  <header class="admin-header text-white shadow-lg">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold">Buy Electricity</h1>
+            <p class="text-gray-300 text-sm">Purchase electricity credits for users</p>
+          </div>
+        </div>
 
-  <div class="container mx-auto mt-6">
+        <a href="{{ url_for('admin_dashboard') }}"
+           class="group relative inline-flex items-center justify-center px-6 py-2 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 transition-all duration-300 card-hover backdrop-blur-sm">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        {% for category, message in messages %}
-          <div class="mb-2 text-{{category}}-600">
-            {{ message }}
-          </div>
-        {% endfor %}
+        <div class="mb-8">
+          {% for category, message in messages %}
+            <div class="flash-message rounded-xl p-4 mb-3 card-hover">
+              <div class="flex items-center">
+                <div class="w-6 h-6 mr-3 flex-shrink-0">
+                  {% if category == 'success' %}
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  {% else %}
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  {% endif %}
+                </div>
+                <span class="text-gray-800 font-medium">{{ message }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
       {% endif %}
     {% endwith %}
-    
-    <form method="POST">
-      <div class="mb-4">
-        <label class="block mb-1">Meter Number</label>
-        <!-- We'll give an ID to this input so we can attach a JS event listener -->
-        <input 
-          type="text" 
-          name="meter_number" 
-          id="meter_number" 
-          class="border p-2 w-1/2"
-        >
-        
-        <!-- A small div to display feedback about the meter -->
-        <div id="meterFeedback" class="mt-1 text-sm"></div>
+
+    <!-- Purchase Form -->
+    <div class="form-container rounded-xl p-8 card-hover max-w-2xl mx-auto">
+      <div class="flex items-center space-x-3 mb-6">
+        <div class="w-12 h-12 purchase-gradient rounded-xl flex items-center justify-center float-animation">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800">Purchase Electricity</h2>
+          <p class="text-gray-600">Enter meter details and amount</p>
+        </div>
       </div>
-      
-      <div class="mb-4">
-        <label class="block mb-1">Amount (Currency)</label>
-        <input type="number" step="0.01" name="amount" class="border p-2 w-1/2">
+
+      <form method="POST" class="space-y-6">
+        <!-- Meter Number Field -->
+        <div>
+          <label class="block text-gray-800 font-semibold mb-3 text-lg flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Meter Number
+          </label>
+          <div class="relative">
+            <input
+              type="text"
+              name="meter_number"
+              id="meter_number"
+              class="input-field w-full p-4 rounded-xl text-gray-800 font-medium placeholder-gray-500 pl-12"
+              placeholder="Enter meter number..."
+              required
+            >
+            <svg class="absolute left-4 top-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+
+          <!-- Meter Feedback -->
+          <div id="meterFeedback" class="meter-feedback" style="display: none;"></div>
+        </div>
+
+        <!-- Amount Field -->
+        <div>
+          <label class="block text-gray-800 font-semibold mb-3 text-lg flex items-center">
+            <svg class="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+            Amount (Currency)
+          </label>
+          <div class="relative">
+            <input
+              type="number"
+              step="0.01"
+              name="amount"
+              class="input-field w-full p-4 rounded-xl text-gray-800 font-medium placeholder-gray-500 pl-12"
+              placeholder="Enter amount..."
+              required
+            >
+            <svg class="absolute left-4 top-4 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-4">
+          <button type="submit" class="btn-success w-full text-white px-6 py-4 rounded-xl font-semibold text-lg hover:shadow-lg transition-all duration-300 flex items-center justify-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+            Purchase Electricity
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 max-w-4xl mx-auto">
+      <!-- Purchase Info Card -->
+      <div class="search-container rounded-xl p-6 card-hover">
+        <div class="flex items-center space-x-3 mb-4">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-800">Purchase Information</h3>
+        </div>
+        <div class="text-gray-600 space-y-2">
+          <p class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>Enter the customer's meter number to verify their account</p>
+          <p class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>Specify the amount in local currency</p>
+          <p class="flex items-center"><span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>The system will automatically convert to electricity units</p>
+        </div>
       </div>
-      
-      <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded">Buy</button>
-    </form>
-  </div>
+
+      <!-- Status Card -->
+      <div class="search-container rounded-xl p-6 card-hover">
+        <div class="flex items-center space-x-3 mb-4">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-800">Transaction Status</h3>
+        </div>
+        <div class="text-gray-600 space-y-2">
+          <p class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>Real-time meter validation</p>
+          <p class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>Instant credit transfer</p>
+          <p class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-2"></span>SMS confirmation to customer</p>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <!-- JavaScript for live checking meter existence -->
   <script>
@@ -58,29 +348,69 @@
     meterInput.addEventListener('blur', () => {
       const meterValue = meterInput.value.trim();
       if(!meterValue){
-        feedbackDiv.textContent = '';
+        feedbackDiv.style.display = 'none';
         return;
       }
+
+      // Show loading state
+      feedbackDiv.style.display = 'block';
+      feedbackDiv.className = 'meter-feedback loading';
+      feedbackDiv.innerHTML = `
+        <div class="flex items-center">
+          <div class="loading-spinner mr-3"></div>
+          <span>Checking meter...</span>
+        </div>
+      `;
+
       // Perform a GET request to /admin/check_meter?meter=...
       fetch(`/admin/check_meter?meter=${encodeURIComponent(meterValue)}`)
         .then(response => response.json())
         .then(data => {
           if(data.exists){
-            feedbackDiv.textContent = `Meter exists for user: ${data.username}`;
-            feedbackDiv.classList.remove('text-red-600');
-            feedbackDiv.classList.add('text-green-600');
+            feedbackDiv.className = 'meter-feedback success';
+            feedbackDiv.innerHTML = `
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Meter exists for user: <strong>${data.username}</strong></span>
+              </div>
+            `;
           } else {
-            feedbackDiv.textContent = 'No user found for that meter number.';
-            feedbackDiv.classList.remove('text-green-600');
-            feedbackDiv.classList.add('text-red-600');
+            feedbackDiv.className = 'meter-feedback error';
+            feedbackDiv.innerHTML = `
+              <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>No user found for that meter number</span>
+              </div>
+            `;
           }
         })
         .catch(err => {
-          feedbackDiv.textContent = 'Error checking meter. Please try again.';
-          feedbackDiv.classList.remove('text-green-600');
-          feedbackDiv.classList.add('text-red-600');
+          feedbackDiv.className = 'meter-feedback error';
+          feedbackDiv.innerHTML = `
+            <div class="flex items-center">
+              <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <span>Error checking meter. Please try again.</span>
+            </div>
+          `;
           console.error(err);
         });
+    });
+
+    // Add form interaction effects
+    document.querySelectorAll('.input-field').forEach(input => {
+      input.addEventListener('focus', () => {
+        input.style.transform = 'translateY(-2px)';
+      });
+
+      input.addEventListener('blur', () => {
+        input.style.transform = 'translateY(0)';
+      });
     });
   </script>
 </body>

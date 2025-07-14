@@ -5,9 +5,45 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import paho.mqtt.client as mqtt
+from flasgger import Swagger, swag_from
+
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 app.secret_key = 'SOME_SECRET_KEY'  # Change for production
+
+# Swagger configuration
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": "apispec",
+            "route": "/apispec.json",
+            "rule_filter": lambda rule: True,  # all in
+            "model_filter": lambda tag: True,  # all in
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/swagger/"
+}
+
+swagger_template = {
+    "info": {
+        "title": "Power Management API",
+        "description": "API for Power Management System",
+        "contact": {
+            "responsibleOrganization": "Power Management",
+            "responsibleDeveloper": "Developer",
+            "email": "developer@example.com",
+        },
+        "version": "1.0",
+    },
+    "schemes": ["http", "https"],
+}
+
+swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
 # Global MQTT settings
 mqtt_server = "192.168.1.72"
@@ -97,10 +133,91 @@ flask_mqtt_client.connect(mqtt_server, mqtt_port, 60)
 # Routes
 ####################################
 @app.route('/')
+@swag_from({
+    'tags': ['Pages'],
+    'summary': 'Home page',
+    'description': 'The main landing page of the application',
+    'responses': {
+        200: {
+            'description': 'Home page rendered successfully'
+        }
+    }
+})
 def home():
     return render_template('home.html')  # Basic home page
 
 @app.route('/register', methods=['GET', 'POST'])
+@swag_from({
+    'tags': ['Authentication'],
+    'summary': 'User registration',
+    'description': 'Register a new user account',
+    'parameters': [
+        {
+            'name': 'username',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Username'
+        },
+        {
+            'name': 'password',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Password'
+        },
+        {
+            'name': 'phone',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Phone number'
+        },
+        {
+            'name': 'meter_number',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number'
+        },
+        {
+            'name': 'gender',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Gender'
+        },
+        {
+            'name': 'province',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Province'
+        },
+        {
+            'name': 'district',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'District'
+        },
+        {
+            'name': 'sector',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Sector'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Registration successful, redirects to login page'
+        },
+        400: {
+            'description': 'Username or Meter Number already in use'
+        }
+    }
+})
 def register():
     if request.method == 'POST':
         username = request.form.get('username')
@@ -111,12 +228,12 @@ def register():
         province = request.form.get('province')
         district = request.form.get('district')
         sector = request.form.get('sector')
-        
+
         existing_user = User.query.filter((User.username == username) | (User.meter_number == meter_number)).first()
         if existing_user:
             flash("Username or Meter Number already in use!", "error")
             return redirect(url_for('register'))
-        
+
         new_user = User(
             username=username,
             password=password,  # In production, hash the password
@@ -133,15 +250,44 @@ def register():
         db.session.commit()
         flash("Registration successful! Please login.", "success")
         return redirect(url_for('login'))
-    
+
     return render_template('register.html')
 
 @app.route('/login', methods=['GET','POST'])
+@swag_from({
+    'tags': ['Authentication'],
+    'summary': 'User login',
+    'description': 'Login with username and password',
+    'parameters': [
+        {
+            'name': 'username',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Username'
+        },
+        {
+            'name': 'password',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Password'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Login successful, redirects to dashboard'
+        },
+        401: {
+            'description': 'Invalid credentials'
+        }
+    }
+})
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
+
         user = User.query.filter_by(username=username, password=password).first()
         if user:
             login_user(user)
@@ -155,6 +301,16 @@ def login():
     return render_template('login.html')
 
 @app.route('/logout')
+@swag_from({
+    'tags': ['Authentication'],
+    'summary': 'User logout',
+    'description': 'Logout the current user and redirect to home page',
+    'responses': {
+        302: {
+            'description': 'Logout successful, redirects to home page'
+        }
+    }
+})
 def logout():
     logout_user()
     return redirect(url_for('home'))
@@ -163,11 +319,57 @@ def logout():
 # Admin Section
 ####################################
 @app.route('/admin', methods=['GET'])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Admin dashboard',
+    'description': 'The main dashboard for administrators',
+    'responses': {
+        200: {
+            'description': 'Admin dashboard rendered successfully'
+        },
+        401: {
+            'description': 'Unauthorized access'
+        }
+    }
+})
 def admin_dashboard():
     users = User.query.all()
     return render_template('admin_dashboard.html', users=users)
 
 @app.route('/admin/api/users')
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Get all users or search for users',
+    'parameters': [
+        {
+            'name': 'search',
+            'in': 'query',
+            'type': 'string',
+            'required': False,
+            'description': 'Search term for username or meter number'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'List of users',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'integer'},
+                        'username': {'type': 'string'},
+                        'meter_number': {'type': 'string'},
+                        'province': {'type': 'string'},
+                        'district': {'type': 'string'},
+                        'sector': {'type': 'string'},
+                        'current_power': {'type': 'number'}
+                    }
+                }
+            }
+        }
+    }
+})
 def admin_api_users():
     search_query = request.args.get('search', '').strip()
     if search_query:
@@ -191,6 +393,50 @@ def admin_api_users():
     return jsonify(data)
 
 @app.route('/admin/api/users/<int:user_id>/update', methods=['POST'])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Update user information',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID of the user to update'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'description': 'User data to update',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'username': {'type': 'string'},
+                    'meter_number': {'type': 'string'},
+                    'province': {'type': 'string'},
+                    'district': {'type': 'string'},
+                    'sector': {'type': 'string'},
+                    'current_power': {'type': 'number'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'User updated successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'}
+                }
+            }
+        },
+        404: {
+            'description': 'User not found'
+        }
+    }
+})
 def admin_api_users_update(user_id):
     user = User.query.get_or_404(user_id)
     data = request.json
@@ -207,6 +453,33 @@ def admin_api_users_update(user_id):
     return jsonify({"success": True})
 
 @app.route('/admin/api/users/<int:user_id>/delete', methods=['DELETE'])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Delete a user',
+    'parameters': [
+        {
+            'name': 'user_id',
+            'in': 'path',
+            'type': 'integer',
+            'required': True,
+            'description': 'ID of the user to delete'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'User deleted successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'}
+                }
+            }
+        },
+        404: {
+            'description': 'User not found'
+        }
+    }
+})
 def admin_api_users_delete(user_id):
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
@@ -214,10 +487,42 @@ def admin_api_users_delete(user_id):
     return jsonify({"success": True})
 
 @app.route('/admin/other_users', endpoint='other_admin_users')
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Other admin users page',
+    'description': 'Alternative page for administrators to view and manage users',
+    'responses': {
+        200: {
+            'description': 'Other admin users page rendered successfully'
+        }
+    }
+})
 def other_admin_users_page():
     return render_template('other_admin_users.html')
 
 @app.route('/admin/view-meter', methods=['GET', 'POST'])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'View meter data',
+    'description': 'View sensor readings for a specific meter',
+    'parameters': [
+        {
+            'name': 'meter_number',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number to view'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Meter data retrieved successfully'
+        },
+        404: {
+            'description': 'No data found for that meter'
+        }
+    }
+})
 def admin_view_meter():
     meter_data = None
     if request.method == 'POST':
@@ -228,6 +533,35 @@ def admin_view_meter():
     return render_template('admin_view_meter.html', meter_data=meter_data)
 
 @app.route('/admin/buy-electricity', methods=['GET','POST'])
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Buy electricity for a user',
+    'description': 'Administrator can purchase electricity for any user',
+    'parameters': [
+        {
+            'name': 'meter_number',
+            'in': 'formData',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number of the user'
+        },
+        {
+            'name': 'amount',
+            'in': 'formData',
+            'type': 'number',
+            'required': True,
+            'description': 'Amount to purchase'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Purchase successful'
+        },
+        404: {
+            'description': 'User (meter) not found'
+        }
+    }
+})
 def admin_buy_electricity():
     if request.method == 'POST':
         meter_number = request.form.get('meter_number')
@@ -256,6 +590,19 @@ def admin_buy_electricity():
 # User Section
 ####################################
 @app.route('/user', methods=['GET'])
+@swag_from({
+    'tags': ['User'],
+    'summary': 'User dashboard',
+    'description': 'The main dashboard for regular users',
+    'responses': {
+        200: {
+            'description': 'User dashboard rendered successfully'
+        },
+        302: {
+            'description': 'Redirect to login page if not authenticated'
+        }
+    }
+})
 def user_dashboard():
     user = current_user()
     if not user:
@@ -265,52 +612,161 @@ def user_dashboard():
     return render_template('user_dashboard.html', meter_data=meter_data, user=user)
 
 @app.route('/user/buy-electricity', methods=['POST'])
+@swag_from({
+    'tags': ['User'],
+    'summary': 'Buy electricity',
+    'description': 'Purchase electricity for self or another user',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'buy_for': {
+                        'type': 'string',
+                        'enum': ['self', 'other'],
+                        'description': 'Buy for self or other user'
+                    },
+                    'amount': {
+                        'type': 'number',
+                        'description': 'Amount to purchase'
+                    },
+                    'meter_number': {
+                        'type': 'string',
+                        'description': 'Meter number of other user (required if buy_for is "other")'
+                    }
+                },
+                'required': ['buy_for', 'amount']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Purchase successful',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'},
+                    'power': {'type': 'number'}
+                }
+            }
+        },
+        401: {
+            'description': 'Unauthorized'
+        },
+        404: {
+            'description': 'Meter not found'
+        }
+    }
+})
 def user_buy_electricity():
     user = current_user()
     if not user:
-        flash("Please log in first.", "error")
-        return redirect(url_for('login'))
+        return jsonify({"success": False, "message": "Please log in first."}), 401
 
-    buy_for = request.form.get('buy_for')
-    if buy_for == 'self':
+    # Check if the request is JSON or form data
+    if request.is_json:
+        data = request.json
+        buy_for = data.get('buy_for')
+        raw_amount = data.get('amount', 0)
+        other_meter = data.get('meter_number')
+    else:
+        buy_for = request.form.get('buy_for')
         raw_amount = request.form.get('amount', '0')
-        try:
-            amount = round(float(raw_amount), 2)
-        except ValueError:
-            amount = 0.0
-        purchased_watts = amount / 500.0
+        other_meter = request.form.get('other_meter_number')
+
+    try:
+        amount = round(float(raw_amount), 2)
+    except (ValueError, TypeError):
+        amount = 0.0
+
+    purchased_watts = amount / 500.0
+
+    if buy_for == 'self':
         user.current_power += purchased_watts
         db.session.add(Transaction(
             user_id=user.id,
             meter_number=user.meter_number,
-            purchase_amount=amount
+            purchase_amount=amount,
+            purchase_power=purchased_watts
         ))
         db.session.commit()
-        flash(f"You purchased {purchased_watts:.2f} W for yourself.", "success")
-        return redirect(url_for('user_dashboard'))
+
+        if request.is_json:
+            return jsonify({
+                "success": True, 
+                "message": f"You purchased {purchased_watts:.2f} W for yourself.",
+                "power": purchased_watts
+            })
+        else:
+            flash(f"You purchased {purchased_watts:.2f} W for yourself.", "success")
+            return redirect(url_for('user_dashboard'))
     else:
-        other_meter = request.form.get('other_meter_number')
-        raw_amount = request.form.get('amount', '0')
-        try:
-            amount = round(float(raw_amount), 2)
-        except ValueError:
-            amount = 0.0
+        if not other_meter:
+            if request.is_json:
+                return jsonify({"success": False, "message": "Meter number is required"}), 400
+            else:
+                flash("Meter number is required.", "error")
+                return redirect(url_for('user_dashboard'))
+
         other_user = User.query.filter_by(meter_number=other_meter).first()
         if not other_user:
-            flash("Meter not found.", "error")
-            return redirect(url_for('user_dashboard'))
+            if request.is_json:
+                return jsonify({"success": False, "message": "Meter not found"}), 404
+            else:
+                flash("Meter not found.", "error")
+                return redirect(url_for('user_dashboard'))
+
         purchased_watts = amount / 500.0
         other_user.current_power += purchased_watts
         db.session.add(Transaction(
             user_id=other_user.id,
             meter_number=other_meter,
-            purchase_amount=amount
+            purchase_amount=amount,
+            purchase_power=purchased_watts
         ))
         db.session.commit()
-        flash(f"You purchased {purchased_watts:.2f} W for {other_user.username}.", "success")
-        return redirect(url_for('user_dashboard'))
+
+        if request.is_json:
+            return jsonify({
+                "success": True, 
+                "message": f"You purchased {purchased_watts:.2f} W for {other_user.username}.",
+                "power": purchased_watts
+            })
+        else:
+            flash(f"You purchased {purchased_watts:.2f} W for {other_user.username}.", "success")
+            return redirect(url_for('user_dashboard'))
 
 @app.route('/admin/check_meter')
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Check if meter exists',
+    'description': 'Check if a meter number exists in the system',
+    'parameters': [
+        {
+            'name': 'meter',
+            'in': 'query',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number to check'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Check result',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'exists': {'type': 'boolean'},
+                    'username': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 def check_meter():
     meter = request.args.get('meter', '')
     user = User.query.filter_by(meter_number=meter).first()
@@ -320,6 +776,16 @@ def check_meter():
         return jsonify({'exists': False})
 
 @app.route('/admin/users')
+@swag_from({
+    'tags': ['Admin'],
+    'summary': 'Admin users page',
+    'description': 'Page for administrators to view and manage users',
+    'responses': {
+        200: {
+            'description': 'Admin users page rendered successfully'
+        }
+    }
+})
 def admin_users_page():
     return render_template('admin_users.html')
 
@@ -327,6 +793,44 @@ def admin_users_page():
 # Report
 ####################################
 @app.route('/api/port_report/<meter_number>')
+@swag_from({
+    'tags': ['Meter Reports'],
+    'summary': 'Get power report for a specific meter',
+    'parameters': [
+        {
+            'name': 'meter_number',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number to get report for'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Power report for the meter',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'meter_number': {'type': 'string'},
+                    'latest_purchased_power': {'type': 'number'},
+                    'current_power': {'type': 'number'},
+                    'consumed_power': {'type': 'number'},
+                    'purchased_date': {'type': 'string'},
+                    'latest_date': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Meter not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 def api_port_report(meter_number):
     user = User.query.filter_by(meter_number=meter_number).first()
     if not user:
@@ -369,9 +873,119 @@ def api_port_report(meter_number):
 
 
 ####################################
+# Data Collection Endpoint
+####################################
+@app.route('/collect', methods=['POST'])
+@swag_from({
+    'tags': ['Data Collection'],
+    'summary': 'Collect usage data',
+    'description': 'Collect usage data from different screens',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'meter_number': {
+                        'type': 'string',
+                        'description': 'Meter number'
+                    },
+                    'screen_name': {
+                        'type': 'string',
+                        'description': 'Name of the screen where data is collected'
+                    },
+                    'timestamp': {
+                        'type': 'string',
+                        'format': 'date-time',
+                        'description': 'Time when data was collected'
+                    }
+                },
+                'required': ['meter_number', 'screen_name']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Data collected successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'success': {'type': 'boolean'},
+                    'message': {'type': 'string'}
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid request parameters'
+        }
+    }
+})
+def collect_data():
+    if request.is_json:
+        data = request.json
+    else:
+        data = request.form
+
+    meter_number = data.get('meter_number')
+    screen_name = data.get('screen_name')
+
+    if not meter_number:
+        return jsonify({"success": False, "message": "Meter number is required"}), 400
+
+    if not screen_name:
+        return jsonify({"success": False, "message": "Screen name is required"}), 400
+
+    # Here you would typically store this data in a database
+    # For now, we'll just log it
+    print(f"Collected data: meter_number={meter_number}, screen_name={screen_name}")
+
+    return jsonify({
+        "success": True,
+        "message": f"Data collected successfully from {screen_name}"
+    })
+
+####################################
 # AJAX Endpoints 
 ####################################
 @app.route('/api/latest-reading/<meter_number>')
+@swag_from({
+    'tags': ['Meter Readings'],
+    'summary': 'Get latest sensor reading for a specific meter',
+    'parameters': [
+        {
+            'name': 'meter_number',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number to get reading for'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Latest sensor reading for the meter',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'voltage': {'type': 'number'},
+                    'current': {'type': 'number'},
+                    'power': {'type': 'number'},
+                    'reading_time': {'type': 'string', 'format': 'date-time'}
+                }
+            }
+        },
+        404: {
+            'description': 'No reading found for the meter',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 def api_latest_reading(meter_number):
     reading = SensorReading.query.filter_by(meter_number=meter_number).order_by(SensorReading.id.desc()).first()
     if reading:
@@ -385,6 +999,49 @@ def api_latest_reading(meter_number):
         return jsonify({'error': 'No reading found'}), 404
 
 @app.route('/api/update_consumption', methods=['POST'])
+@swag_from({
+    'tags': ['Meter Readings'],
+    'summary': 'Update power consumption for a meter',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'description': 'Consumption data to update',
+            'schema': {
+                'type': 'object',
+                'required': ['meter_number', 'voltage', 'current', 'power_consumed'],
+                'properties': {
+                    'meter_number': {'type': 'string'},
+                    'voltage': {'type': 'number'},
+                    'current': {'type': 'number'},
+                    'power_consumed': {'type': 'number'}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Consumption updated successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'status': {'type': 'string'},
+                    'remaining_power': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Meter not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 def api_update_consumption():
     print("Received update_consumption request")
     data = request.json
@@ -417,6 +1074,66 @@ def api_update_consumption():
 # Relay Control Endpoint
 ####################################
 @app.route('/api/relay_control', methods=['POST'])
+@swag_from({
+    'tags': ['Relay Control'],
+    'summary': 'Control relay state for a meter',
+    'description': 'Processes relay commands from the web and sends them via MQTT',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'description': 'Relay control data',
+            'schema': {
+                'type': 'object',
+                'required': ['meter_number', 'state'],
+                'properties': {
+                    'meter_number': {'type': 'string'},
+                    'state': {'type': 'string', 'enum': ['on', 'off']}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Relay command sent successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'}
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid request parameters',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Meter not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        },
+        500: {
+            'description': 'Server error',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'},
+                    'status_code': {'type': 'integer'}
+                }
+            }
+        }
+    }
+})
 def relay_control():
     """
     Processes relay commands from the web.
@@ -479,7 +1196,7 @@ def mqtt_on_message(client, userdata, msg):
         voltage = data.get('voltage')
         current = data.get('current')
         power_consumed = data.get('power_consumed', 0.0)
-        
+
         with app.app_context():
             user = User.query.filter_by(meter_number=meter_number).first()
             if user:
@@ -495,7 +1212,7 @@ def mqtt_on_message(client, userdata, msg):
                 print(f"Updated user {meter_number}: remaining power = {user.current_power}")
             else:
                 print(f"No matching user found for meter {meter_number}.")
-            
+
             sr = SensorReading(
                 meter_number=meter_number,
                 voltage=voltage,
@@ -526,6 +1243,39 @@ def start_mqtt_subscriber():
         threading.Timer(10, start_mqtt_subscriber).start()  # Reconnect loop
 
 @app.route('/api/current_power/<meter_number>')
+@swag_from({
+    'tags': ['Meter Readings'],
+    'summary': 'Get current power for a specific meter',
+    'parameters': [
+        {
+            'name': 'meter_number',
+            'in': 'path',
+            'type': 'string',
+            'required': True,
+            'description': 'Meter number to get current power for'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Current power for the meter',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'current_power': {'type': 'string'}
+                }
+            }
+        },
+        404: {
+            'description': 'Meter not found',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
 def api_current_power(meter_number):
     print("Querying current power for meter:", meter_number)
     user = User.query.filter_by(meter_number=meter_number).first()
@@ -545,6 +1295,8 @@ if __name__ == "__main__":
     mqtt_thread = threading.Thread(target=start_mqtt_subscriber)
     mqtt_thread.daemon = True
     mqtt_thread.start()
-    
+
     # Run Flask app (using threaded mode)
+    print("Starting Flask app...")
+    print("Swagger UI available at: http://localhost:5000/swagger/")
     app.run(debug=True, threaded=True)

@@ -1,32 +1,215 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Cash Power Home</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cash Power - Your Financial Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
     body {
-      font-family: 'Times New Roman', serif;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+
+    .glow-effect {
+      box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .pulse-ring {
+      animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+    }
+
+    @keyframes pulse-ring {
+      0% {
+        transform: scale(0.33);
+        opacity: 1;
+      }
+      80%, 100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+
+    .bg-pattern {
+      background-image:
+        radial-gradient(circle at 25% 25%, #667eea 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, #764ba2 0%, transparent 50%);
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <div class="container mx-auto mt-8">
-    <h1 class="text-3xl font-bold mb-4">Welcome to the Cash Power System</h1>
-    
-    <a href="{{ url_for('login') }}"
-       class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-      Login
-    </a>
-    <a href="{{ url_for('register') }}"
-       class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded ml-2">
-      Register
-    </a>
-    <!-- Admin Dashboard Link -->
-    <a href="{{ url_for('admin_dashboard') }}"
-       class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded ml-2">
-      Admin Dashboard
-    </a>
-    
-  </div>
+<body class="bg-gray-50 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+          </div>
+          <h1 class="text-2xl font-bold text-gray-800">Cash Power</h1>
+        </div>
+        <nav class="hidden md:flex space-x-6">
+          <a href="#features" class="text-gray-600 hover:text-gray-800 transition-colors">Features</a>
+          <a href="#about" class="text-gray-600 hover:text-gray-800 transition-colors">About</a>
+          <a href="#contact" class="text-gray-600 hover:text-gray-800 transition-colors">Contact</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative overflow-hidden bg-pattern min-h-screen flex items-center">
+    <div class="container mx-auto px-6 py-20">
+      <div class="max-w-4xl mx-auto text-center">
+        <div class="mb-8">
+          <h1 class="text-5xl md:text-7xl font-bold text-gray-800 mb-6 leading-tight">
+            Welcome to the
+            <span class="text-gradient block">Cash Power System</span>
+          </h1>
+          <p class="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Your ultimate financial command center. Manage, track, and optimize your financial operations with cutting-edge technology.
+          </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
+          <a href="{{ url_for('login') }}"
+             class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 rounded-full hover:from-blue-600 hover:to-purple-700 transition-all duration-300 glow-effect card-hover">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+            </svg>
+            Sign In
+          </a>
+
+          <a href="{{ url_for('register') }}"
+             class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-full hover:border-gray-400 transition-all duration-300 card-hover">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+            </svg>
+            Get Started
+          </a>
+
+          <a href="{{ url_for('admin_dashboard') }}"
+             class="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-purple-500 to-pink-500 rounded-full hover:from-purple-600 hover:to-pink-600 transition-all duration-300 card-hover">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            Admin Panel
+          </a>
+        </div>
+
+        <!-- Floating Animation Element -->
+        <div class="animate-float">
+          <div class="w-32 h-32 mx-auto gradient-bg rounded-full flex items-center justify-center relative">
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full pulse-ring"></div>
+            <svg class="w-16 h-16 text-white relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-20 bg-white">
+    <div class="container mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 class="text-4xl font-bold text-gray-800 mb-4">Powerful Features</h2>
+        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+          Experience the future of financial management with our comprehensive suite of tools.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center p-8 bg-gray-50 rounded-2xl card-hover">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Real-time Analytics</h3>
+          <p class="text-gray-600">Monitor your financial performance with live dashboards and intelligent insights.</p>
+        </div>
+
+        <div class="text-center p-8 bg-gray-50 rounded-2xl card-hover">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Secure Transactions</h3>
+          <p class="text-gray-600">Bank-grade security ensures your financial data is always protected and encrypted.</p>
+        </div>
+
+        <div class="text-center p-8 bg-gray-50 rounded-2xl card-hover">
+          <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Smart Automation</h3>
+          <p class="text-gray-600">Automate repetitive tasks and let AI optimize your financial workflows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-12">
+    <div class="container mx-auto px-6">
+      <div class="text-center">
+        <div class="flex items-center justify-center space-x-3 mb-4">
+          <div class="w-8 h-8 gradient-bg rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold">Cash Power</h3>
+        </div>
+        <p class="text-gray-400 mb-6">Empowering your financial future with cutting-edge technology.</p>
+        <div class="flex justify-center space-x-6">
+          <a href="#" class="text-gray-400 hover:text-white transition-colors">Privacy Policy</a>
+          <a href="#" class="text-gray-400 hover:text-white transition-colors">Terms of Service</a>
+          <a href="#" class="text-gray-400 hover:text-white transition-colors">Support</a>
+        </div>
+        <div class="mt-8 pt-8 border-t border-gray-700">
+          <p class="text-gray-400">&copy; 2025 Cash Power System. All rights reserved.</p>
+        </div>
+      </div>
+    </div>
+  </footer>
 </body>
 </html>
