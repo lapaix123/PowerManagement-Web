@@ -46,8 +46,11 @@ swagger_template = {
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
 # Global MQTT settings
-mqtt_server = "192.168.1.71"
-mqtt_port = 1884
+mqtt_server = "127.0.0.1"
+mqtt_port = 1883
+
+
+
 
 # Configure database (SQLite example). For MySQL/Postgres, adjust accordingly.
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -80,6 +83,7 @@ class Transaction(db.Model):
     meter_number = db.Column(db.String(50))
     purchase_power = db.Column(db.Float)  # Purchased power in W
     purchase_amount = db.Column(db.Float)  # Currency amount (or watt amount, depending on your logic)
+    payment_method = db.Column(db.String(20), nullable=True)  # Payment method used (mtn, airtel, visa, mastercard)
     date_purchased = db.Column(db.DateTime, default=datetime.utcnow)
 
 class SensorReading(db.Model):
@@ -570,18 +574,18 @@ def admin_buy_electricity():
             amount = float(amount_str)
         except ValueError:
             amount = 0.0
+
+        if amount <= 0:
+            flash("Please enter a valid amount.", "error")
+            return render_template('admin_buy_electricity.html')
+
         user = User.query.filter_by(meter_number=meter_number).first()
         if user:
-            purchased_watts = amount / 500.0
-            user.current_power += purchased_watts
-            new_transaction = Transaction(
-                user_id=user.id,
-                meter_number=meter_number,
-                purchase_amount=amount
-            )
-            db.session.add(new_transaction)
-            db.session.commit()
-            flash(f"Successfully purchased {purchased_watts} W for {user.username}.", "success")
+            # Redirect to payment page with purchase details
+            return redirect(url_for('payment_page', 
+                                   amount=amount, 
+                                   buy_for='admin', 
+                                   meter_number=meter_number))
         else:
             flash("User (meter) not found!", "error")
     return render_template('admin_buy_electricity.html')
@@ -673,72 +677,201 @@ def user_buy_electricity():
         buy_for = data.get('buy_for')
         raw_amount = data.get('amount', 0)
         other_meter = data.get('meter_number')
-    else:
-        buy_for = request.form.get('buy_for')
-        raw_amount = request.form.get('amount', '0')
-        other_meter = request.form.get('other_meter_number')
 
-    try:
-        amount = round(float(raw_amount), 2)
-    except (ValueError, TypeError):
-        amount = 0.0
+        # For API requests, process directly without payment page
+        try:
+            amount = round(float(raw_amount), 2)
+        except (ValueError, TypeError):
+            amount = 0.0
 
-    purchased_watts = amount / 500.0
+        purchased_watts = amount / 500.0
 
-    if buy_for == 'self':
-        user.current_power += purchased_watts
-        db.session.add(Transaction(
-            user_id=user.id,
-            meter_number=user.meter_number,
-            purchase_amount=amount,
-            purchase_power=purchased_watts
-        ))
-        db.session.commit()
-
-        if request.is_json:
+        if buy_for == 'self':
+            user.current_power += purchased_watts
+            db.session.add(Transaction(
+                user_id=user.id,
+                meter_number=user.meter_number,
+                purchase_amount=amount,
+                purchase_power=purchased_watts
+            ))
+            db.session.commit()
             return jsonify({
                 "success": True, 
                 "message": f"You purchased {purchased_watts:.2f} W for yourself.",
                 "power": purchased_watts
             })
         else:
-            flash(f"You purchased {purchased_watts:.2f} W for yourself.", "success")
-            return redirect(url_for('user_dashboard'))
-    else:
-        if not other_meter:
-            if request.is_json:
+            if not other_meter:
                 return jsonify({"success": False, "message": "Meter number is required"}), 400
-            else:
-                flash("Meter number is required.", "error")
-                return redirect(url_for('user_dashboard'))
 
-        other_user = User.query.filter_by(meter_number=other_meter).first()
-        if not other_user:
-            if request.is_json:
+            other_user = User.query.filter_by(meter_number=other_meter).first()
+            if not other_user:
                 return jsonify({"success": False, "message": "Meter not found"}), 404
-            else:
-                flash("Meter not found.", "error")
-                return redirect(url_for('user_dashboard'))
 
-        purchased_watts = amount / 500.0
-        other_user.current_power += purchased_watts
-        db.session.add(Transaction(
-            user_id=other_user.id,
-            meter_number=other_meter,
-            purchase_amount=amount,
-            purchase_power=purchased_watts
-        ))
-        db.session.commit()
-
-        if request.is_json:
+            purchased_watts = amount / 500.0
+            other_user.current_power += purchased_watts
+            db.session.add(Transaction(
+                user_id=other_user.id,
+                meter_number=other_meter,
+                purchase_amount=amount,
+                purchase_power=purchased_watts
+            ))
+            db.session.commit()
             return jsonify({
                 "success": True, 
                 "message": f"You purchased {purchased_watts:.2f} W for {other_user.username}.",
                 "power": purchased_watts
             })
-        else:
-            flash(f"You purchased {purchased_watts:.2f} W for {other_user.username}.", "success")
+    else:
+        # For form submissions, redirect to payment page
+        buy_for = request.form.get('buy_for')
+        raw_amount = request.form.get('amount', '0')
+        other_meter = request.form.get('other_meter_number')
+
+        try:
+            amount = round(float(raw_amount), 2)
+        except (ValueError, TypeError):
+            amount = 0.0
+
+        if amount <= 0:
+            flash("Please enter a valid amount.", "error")
             return redirect(url_for('user_dashboard'))
+
+        if buy_for == 'other' and not other_meter:
+            flash("Meter number is required.", "error")
+            return redirect(url_for('user_dashboard'))
+
+        if buy_for == 'other':
+            other_user = User.query.filter_by(meter_number=other_meter).first()
+            if not other_user:
+                flash("Meter not found.", "error")
+                return redirect(url_for('user_dashboard'))
+
+        # Redirect to payment page with purchase details
+        return redirect(url_for('payment_page', 
+                               amount=amount, 
+                               buy_for=buy_for, 
+                               meter_number=user.meter_number if buy_for == 'self' else None,
+                               other_meter_number=other_meter if buy_for == 'other' else None))
+
+@app.route('/payment')
+def payment_page():
+    amount = request.args.get('amount', '0')
+    buy_for = request.args.get('buy_for', 'self')
+    meter_number = request.args.get('meter_number')
+    other_meter_number = request.args.get('other_meter_number')
+
+    # Only check for user login if it's not an admin purchase
+    if buy_for != 'admin':
+        user = current_user()
+        if not user:
+            flash("Please log in first.", "error")
+            return redirect(url_for('login'))
+
+    try:
+        amount = float(amount)
+    except (ValueError, TypeError):
+        amount = 0.0
+
+    if amount <= 0:
+        flash("Invalid amount.", "error")
+        return redirect(url_for('user_dashboard'))
+
+    return render_template('payment.html', 
+                          amount=amount, 
+                          buy_for=buy_for, 
+                          meter_number=meter_number,
+                          other_meter_number=other_meter_number)
+
+@app.route('/process_payment', methods=['POST'])
+def process_payment():
+    buy_for = request.form.get('buy_for', 'self')
+
+    # Only check for user login if it's not an admin purchase
+    if buy_for != 'admin':
+        user = current_user()
+        if not user:
+            flash("Please log in first.", "error")
+            return redirect(url_for('login'))
+    else:
+        user = None
+
+    # Get payment details
+    payment_method = request.form.get('payment_method')
+    if not payment_method:
+        flash("Please select a payment method.", "error")
+        return redirect(url_for('payment_page', 
+                               amount=request.form.get('amount'),
+                               buy_for=request.form.get('buy_for'),
+                               meter_number=request.form.get('meter_number'),
+                               other_meter_number=request.form.get('other_meter_number')))
+
+    # Get purchase details
+    try:
+        amount = round(float(request.form.get('amount', '0')), 2)
+    except (ValueError, TypeError):
+        amount = 0.0
+
+    if amount <= 0:
+        flash("Invalid amount.", "error")
+        return redirect(url_for('user_dashboard'))
+
+    buy_for = request.form.get('buy_for', 'self')
+    meter_number = request.form.get('meter_number')
+    other_meter_number = request.form.get('other_meter_number')
+
+    # Calculate purchased watts
+    purchased_watts = amount / 500.0
+
+    # Process the purchase
+    if buy_for == 'self':
+        user.current_power += purchased_watts
+        db.session.add(Transaction(
+            user_id=user.id,
+            meter_number=user.meter_number,
+            purchase_amount=amount,
+            purchase_power=purchased_watts,
+            payment_method=payment_method
+        ))
+        db.session.commit()
+        flash(f"You purchased {purchased_watts:.2f} W for yourself using {payment_method.upper()}.", "success")
+        return redirect(url_for('user_dashboard'))
+    elif buy_for == 'admin':
+        # Admin purchase for a user
+        target_user = User.query.filter_by(meter_number=meter_number).first()
+        if not target_user:
+            flash("Meter not found.", "error")
+            return redirect(url_for('admin_buy_electricity'))
+
+        target_user.current_power += purchased_watts
+        db.session.add(Transaction(
+            user_id=target_user.id,
+            meter_number=meter_number,
+            purchase_amount=amount,
+            purchase_power=purchased_watts,
+            payment_method=payment_method
+        ))
+        db.session.commit()
+        flash(f"Successfully purchased {purchased_watts:.2f} W for {target_user.username} using {payment_method.upper()}.", "success")
+        return redirect(url_for('admin_dashboard'))
+    else:
+        # User purchase for another user
+        other_user = User.query.filter_by(meter_number=other_meter_number).first()
+        if not other_user:
+            flash("Meter not found.", "error")
+            return redirect(url_for('user_dashboard'))
+
+        other_user.current_power += purchased_watts
+        db.session.add(Transaction(
+            user_id=other_user.id,
+            meter_number=other_meter_number,
+            purchase_amount=amount,
+            purchase_power=purchased_watts,
+            payment_method=payment_method
+        ))
+        db.session.commit()
+        flash(f"You purchased {purchased_watts:.2f} W for {other_user.username} using {payment_method.upper()}.", "success")
+        return redirect(url_for('user_dashboard'))
 
 @app.route('/admin/check_meter')
 @swag_from({
@@ -1263,7 +1396,7 @@ if __name__ == "__main__":
 
     # Run Flask app (accessible on local network)
     print("Starting Flask app...")
-    print("Swagger UI available at: http://192.168.1.71:5000/swagger/")
-    
+    print("Swagger UI available at: http://192.168.1.69:5000/swagger/")
+
     # Change host to 0.0.0.0 to allow LAN access
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
