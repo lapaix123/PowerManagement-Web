@@ -95,6 +95,15 @@ class SensorReading(db.Model):
     power = db.Column(db.Float)
     reading_time = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    content = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
 ####################################
 # Utility: Database Init Command
 ####################################
@@ -921,6 +930,145 @@ def check_meter():
 })
 def admin_users_page():
     return render_template('admin_users.html')
+
+####################################
+# Messaging Routes
+####################################
+@app.route('/user/messages')
+def user_messages():
+    """User messages page to contact admin support."""
+    user = current_user()
+    if not user:
+        flash("Please log in first.", "error")
+        return redirect(url_for('login'))
+
+    # Get all messages for this user
+    messages = Message.query.filter(
+        ((Message.sender_id == user.id) & (Message.receiver_id.in_([u.id for u in User.query.filter_by(role='admin')]))) |
+        ((Message.receiver_id == user.id) & (Message.sender_id.in_([u.id for u in User.query.filter_by(role='admin')])))
+    ).order_by(Message.timestamp).all()
+
+    # Mark all messages as read
+    for message in messages:
+        if message.receiver_id == user.id and not message.is_read:
+            message.is_read = True
+
+    db.session.commit()
+
+    return render_template('user_messages.html', user=user, messages=messages)
+
+@app.route('/user/send-message', methods=['POST'])
+def user_send_message():
+    """Send a message from user to admin."""
+    user = current_user()
+    if not user:
+        flash("Please log in first.", "error")
+        return redirect(url_for('login'))
+
+    message_content = request.form.get('message', '').strip()
+    if not message_content:
+        flash("Message cannot be empty.", "error")
+        return redirect(url_for('user_messages'))
+
+    # Find an admin to send the message to
+    admin = User.query.filter_by(role='admin').first()
+    if not admin:
+        flash("No admin available to receive your message.", "error")
+        return redirect(url_for('user_messages'))
+
+    # Create and save the message
+    message = Message(
+        sender_id=user.id,
+        receiver_id=admin.id,
+        content=message_content,
+        is_read=False
+    )
+    db.session.add(message)
+    db.session.commit()
+
+    flash("Message sent successfully.", "success")
+    return redirect(url_for('user_messages'))
+
+@app.route('/admin/messages')
+@app.route('/admin/messages/<int:user_id>')
+def admin_messages(user_id=None):
+    """Admin interface to view and respond to user messages."""
+    if not is_admin():
+        flash("Admin access required.", "error")
+        return redirect(url_for('login'))
+
+    admin = current_user()
+    users = User.query.filter_by(role='user').all()
+    selected_user = None
+    chat_messages = []
+
+    # Get unread message counts for each user
+    unread_counts = {}
+    for user in users:
+        count = Message.query.filter_by(sender_id=user.id, receiver_id=admin.id, is_read=False).count()
+        if count > 0:
+            unread_counts[user.id] = count
+
+    if user_id:
+        selected_user = User.query.get(user_id)
+        if selected_user:
+            # Get all messages between admin and selected user
+            chat_messages = Message.query.filter(
+                ((Message.sender_id == admin.id) & (Message.receiver_id == user_id)) |
+                ((Message.receiver_id == admin.id) & (Message.sender_id == user_id))
+            ).order_by(Message.timestamp).all()
+
+            # Mark messages from this user as read
+            unread_messages = Message.query.filter_by(
+                sender_id=user_id, 
+                receiver_id=admin.id,
+                is_read=False
+            ).all()
+
+            for message in unread_messages:
+                message.is_read = True
+
+            db.session.commit()
+
+    return render_template(
+        'admin_messages.html',
+        users=users,
+        selected_user=selected_user,
+        chat_messages=chat_messages,
+        unread_counts=unread_counts
+    )
+
+@app.route('/admin/send-message/<int:user_id>', methods=['POST'])
+def admin_send_message(user_id):
+    """Send a message from admin to user."""
+    if not is_admin():
+        flash("Admin access required.", "error")
+        return redirect(url_for('login'))
+
+    admin = current_user()
+    user = User.query.get(user_id)
+
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for('admin_messages'))
+
+    message_content = request.form.get('message', '').strip()
+    if not message_content:
+        flash("Message cannot be empty.", "error")
+        return redirect(url_for('admin_messages', user_id=user_id))
+
+    # Create and save the message
+    message = Message(
+        sender_id=admin.id,
+        receiver_id=user.id,
+        content=message_content,
+        is_read=False
+    )
+    db.session.add(message)
+    db.session.commit()
+
+    flash("Message sent successfully.", "success")
+    return redirect(url_for('admin_messages', user_id=user_id))
 
 ####################################
 ####################################
