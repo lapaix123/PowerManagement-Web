@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Messages - {{ user.username }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .dashboard-container {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .card {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .btn-primary:hover::before {
+      left: 100%;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .input-field {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .header-gradient {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .message-bubble {
+      border-radius: 18px;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    .message-sent {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-received {
+      background: #f3f4f6;
+      color: #1f2937;
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    .floating-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape:nth-child(1) {
+      width: 100px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.05);
+      top: 10%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+
+    .shape:nth-child(2) {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.03);
+      top: 60%;
+      left: 80%;
+      animation-delay: 2s;
+    }
+
+    .shape:nth-child(3) {
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.02);
+      top: 30%;
+      left: 85%;
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header-gradient p-6 text-white">
+    <div class="container mx-auto flex flex-col lg:flex-row justify-between items-center">
+      <div class="flex items-center space-x-6 mb-4 lg:mb-0">
+        <!-- REG Logo -->
+        <div class="flex-shrink-0">
+          <img src="{{ url_for('static', filename='images/logo REg.png') }}" alt="REG Logo" class="h-16 w-auto">
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold">Messages</h1>
+          <p class="text-gray-300 mt-1">Contact support</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <a href="{{ url_for('user_dashboard') }}" class="btn-primary px-6 py-3 rounded-lg flex items-center space-x-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg flex items-center space-x-2">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          <span>Logout</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto mt-8 px-4">
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-4 p-4 rounded-lg border-l-4 bg-{{ category }}-50 border-{{ category }}-400 text-{{ category }}-700">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <div class="card rounded-2xl p-8 mb-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6">Contact Admin Support</h2>
+      <p class="text-gray-600 mb-6">Use this form to send a message to our support team. We'll get back to you as soon as possible.</p>
+      
+      <form method="POST" action="{{ url_for('user_send_message') }}">
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Your Message</label>
+          <textarea 
+            name="message" 
+            class="input-field w-full h-32" 
+            placeholder="Type your message here..." 
+            required
+          ></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary w-full py-4 rounded-lg text-lg font-semibold flex items-center justify-center space-x-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+          </svg>
+          <span>Send Message</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- Message History -->
+    <div class="card rounded-2xl p-8">
+      <h2 class="text-2xl font-bold text-gray-800 mb-6">Message History</h2>
+      
+      <div class="message-container space-y-6">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="message-wrapper">
+              {% if message.sender_id == user.id %}
+                <!-- Sent message -->
+                <div class="message-bubble message-sent">
+                  <div class="message-content">{{ message.content }}</div>
+                  <div class="message-time text-right">{{ message.timestamp.strftime('%b %d, %Y %H:%M') }}</div>
+                </div>
+              {% else %}
+                <!-- Received message -->
+                <div class="message-bubble message-received">
+                  <div class="message-content">{{ message.content }}</div>
+                  <div class="message-time">{{ message.timestamp.strftime('%b %d, %Y %H:%M') }}</div>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="text-center text-gray-500 py-8">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+            </svg>
+            <p>No messages yet. Start a conversation with our support team!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auto-scroll to bottom of message container on page load
+    window.onload = function() {
+      const messageContainer = document.querySelector('.message-container');
+      if (messageContainer) {
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Messages - Cash Power System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    .btn-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      transition: all 0.3s ease;
+    }
+
+    .btn-gradient:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .message-bubble {
+      border-radius: 18px;
+      padding: 10px 15px;
+      margin-bottom: 10px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    .message-sent {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message-received {
+      background: #f3f4f6;
+      color: #1f2937;
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    .message-container {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 10px;
+    }
+
+    .message-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .message-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .message-container::-webkit-scrollbar-thumb {
+      background: #c7d2fe;
+      border-radius: 10px;
+    }
+
+    .message-container::-webkit-scrollbar-thumb:hover {
+      background: #a5b4fc;
+    }
+
+    .unread-badge {
+      background: #ef4444;
+      color: white;
+      border-radius: 9999px;
+      padding: 0.1rem 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+  <!-- Header -->
+  <header class="admin-header text-white shadow-lg">
+    <div class="container mx-auto px-6 py-4">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center space-x-3 mb-4 lg:mb-0">
+          <!-- REG Logo -->
+          <div class="flex-shrink-0 mr-2">
+            <img src="{{ url_for('static', filename='images/logo REg.png') }}" alt="REG Logo" class="h-12 w-auto">
+          </div>
+          <div class="w-10 h-10 gradient-bg rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-bold">Admin Messages</h1>
+            <p class="text-gray-300 text-sm">User Support Communications</p>
+          </div>
+        </div>
+
+        <nav class="flex flex-wrap items-center gap-3">
+          <a href="{{ url_for('admin_dashboard') }}"
+             class="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 transition-all duration-300 card-hover backdrop-blur-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+            </svg>
+            Dashboard
+          </a>
+
+          <a href="{{ url_for('admin_view_meter') }}"
+             class="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 transition-all duration-300 card-hover backdrop-blur-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            View Meter
+          </a>
+
+          <a href="{{ url_for('admin_buy_electricity') }}"
+             class="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-lg hover:bg-white/20 transition-all duration-300 card-hover backdrop-blur-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Buy Electricity
+          </a>
+
+          <a href="{{ url_for('logout') }}"
+             class="group relative inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-500/20 rounded-lg hover:bg-red-500/30 transition-all duration-300 card-hover backdrop-blur-sm">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Logout
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-6 py-8">
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-8">
+          {% for category, message in messages %}
+            <div class="bg-white rounded-xl p-4 shadow-md mb-3 card-hover">
+              <div class="flex items-center">
+                <div class="w-6 h-6 mr-3 flex-shrink-0">
+                  {% if category == 'success' %}
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  {% else %}
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                  {% endif %}
+                </div>
+                <span class="text-gray-800 font-medium">{{ message }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- User List -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+          <h2 class="text-xl font-bold text-gray-800">Users</h2>
+          <p class="text-sm text-gray-600">Select a user to view their messages</p>
+        </div>
+
+        <div class="overflow-y-auto max-h-[600px]">
+          <ul class="divide-y divide-gray-200">
+            {% for user in users %}
+              <li>
+                <a href="{{ url_for('admin_messages', user_id=user.id) }}" 
+                   class="block px-6 py-4 hover:bg-gray-50 transition-colors duration-200 {% if selected_user and selected_user.id == user.id %}bg-indigo-50{% endif %}">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                      <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                        <span class="text-indigo-600 font-semibold">{{ user.username[0] | upper }}</span>
+                      </div>
+                      <div>
+                        <h3 class="text-sm font-medium text-gray-900">{{ user.username }}</h3>
+                        <p class="text-xs text-gray-500">{{ user.meter_number }}</p>
+                      </div>
+                    </div>
+                    
+                    {% if unread_counts and unread_counts.get(user.id, 0) > 0 %}
+                      <span class="unread-badge">{{ unread_counts.get(user.id) }}</span>
+                    {% endif %}
+                  </div>
+                </a>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Message Area -->
+      <div class="bg-white rounded-xl shadow-lg overflow-hidden lg:col-span-2">
+        {% if selected_user %}
+          <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+            <div class="flex items-center">
+              <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                <span class="text-indigo-600 font-semibold">{{ selected_user.username[0] | upper }}</span>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-gray-800">{{ selected_user.username }}</h2>
+                <p class="text-sm text-gray-600">{{ selected_user.meter_number }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message History -->
+          <div class="p-6">
+            <div class="message-container space-y-4 mb-6">
+              {% if chat_messages %}
+                {% for message in chat_messages %}
+                  <div class="message-wrapper">
+                    {% if message.sender_id == session.user_id %}
+                      <!-- Admin sent message -->
+                      <div class="message-bubble message-sent">
+                        <div class="message-content">{{ message.content }}</div>
+                        <div class="message-time text-right">{{ message.timestamp.strftime('%b %d, %Y %H:%M') }}</div>
+                      </div>
+                    {% else %}
+                      <!-- User sent message -->
+                      <div class="message-bubble message-received">
+                        <div class="message-content">{{ message.content }}</div>
+                        <div class="message-time">{{ message.timestamp.strftime('%b %d, %Y %H:%M') }}</div>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-center text-gray-500 py-8">
+                  <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                  </svg>
+                  <p>No messages with this user yet.</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Reply Form -->
+            <form method="POST" action="{{ url_for('admin_send_message', user_id=selected_user.id) }}">
+              <div class="flex items-end space-x-3">
+                <div class="flex-grow">
+                  <textarea 
+                    name="message" 
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                    placeholder="Type your reply here..."
+                    rows="3"
+                    required
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn-gradient text-white px-4 py-3 rounded-lg flex-shrink-0">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        {% else %}
+          <div class="flex items-center justify-center h-96">
+            <div class="text-center text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+              </svg>
+              <h3 class="text-xl font-medium mb-2">No User Selected</h3>
+              <p>Select a user from the list to view and respond to their messages.</p>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Auto-scroll to bottom of message container on page load
+    window.onload = function() {
+      const messageContainer = document.querySelector('.message-container');
+      if (messageContainer) {
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
+    };
+  </script>
+</body>
+</html>
