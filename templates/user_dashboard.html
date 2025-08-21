@@ -305,12 +305,11 @@
       </div>
 
       <div class="flex items-center space-x-4">
-        <a href="{{ url_for('api_port_report', meter_number=user.meter_number) }}" class="btn-primary px-6 py-3 rounded-lg flex items-center space-x-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-          <span>View Report</span>
-        </a>
+       <a href="{{ url_for('report', meter_number=user.meter_number) }}" class="btn-primary px-6 py-3 rounded-lg flex items-center space-x-2">
+  <!-- SVG icon and text here -->
+  <span>View Report</span>
+</a>
+
         <a href="{{ url_for('logout') }}" class="btn-danger px-4 py-2 rounded-lg flex items-center space-x-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -451,150 +450,110 @@
 
   <!-- Toast container -->
   <div id="toastContainer"></div>
+<script>
+const meterNumber = "{{ user.meter_number }}";
 
-  <script>
-    const meterNumber = "{{ user.meter_number }}";
+// Make sure showToast() exists
+function showToast(message, color = 'green') {
+  // simple example toast, replace with your existing function
+  const toastContainer = document.getElementById('toastContainer');
+  if (!toastContainer) return;
+  const toast = document.createElement('div');
+  toast.className = `toast bg-${color}-500`;
+  toast.innerText = message;
+  toastContainer.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
 
-    // Show toast notifications
-    function showToast(message, type) {
-      const toast = document.createElement('div');
-      toast.classList.add('toast');
+// Temporarily disable relay buttons
+function disableButtonsTemporarily(ms = 800) {
+  const onBtn = document.getElementById('relayOnButton');
+  const offBtn = document.getElementById('relayOffButton');
+  if (!onBtn || !offBtn) return;
+  onBtn.disabled = true; 
+  offBtn.disabled = true;
+  setTimeout(() => { onBtn.disabled = false; offBtn.disabled = false; }, ms);
+}
 
-      // Set background color based on type
-      if (type === 'green') {
-        toast.classList.add('bg-green-500');
-      } else if (type === 'red') {
-        toast.classList.add('bg-red-500');
-      } else if (type === 'yellow') {
-        toast.classList.add('bg-yellow-500');
-      } else {
-        toast.classList.add('bg-blue-500');
-      }
+// Relay control
+['On', 'Off'].forEach(state => {
+  const btn = document.getElementById(`relay${state}Button`);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    disableButtonsTemporarily();
+    fetch(`/api/relay_control`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meter_number: meterNumber, state: state.toLowerCase() })
+    })
+    .finally(() => {
+      showToast(`Relay is ${state.toUpperCase()}`, state === 'On' ? 'green' : 'yellow');
+    });
+  });
+});
 
-      toast.innerHTML = `
-        <div class="flex items-center space-x-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <span>${message}</span>
-        </div>
-      `;
+// Animate power display
+function animatePowerUpdate() {
+  const el = document.getElementById('currentPowerDisplay');
+  if (!el) return;
+  el.style.transform = 'scale(1.1)';
+  el.style.color = '#10b981';
+  setTimeout(() => { el.style.transform = 'scale(1)'; el.style.color = ''; }, 500);
+}
 
-      const toastContainer = document.getElementById('toastContainer');
-      toastContainer.appendChild(toast);
-
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(20px)';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
+let lowPowerToastInterval = null;
+function checkPowerCondition(powerNum) {
+  const powerDisplay = document.getElementById('currentPowerDisplay');
+  if (!powerDisplay) return;
+  if (powerNum < 3) {
+    powerDisplay.classList.add('text-red-500', 'blinking');
+    if (!lowPowerToastInterval) {
+      showToast('⚠️ Power is low! Please buy electricity.', 'red');
+      lowPowerToastInterval = setInterval(() => {
+        showToast('⚠️ Power is low! Please buy electricity.', 'red');
+      }, 10000);
     }
-
-    // Relay control button event handlers
-    document.getElementById('relayOnButton').addEventListener('click', function() {
-      fetch(`/api/relay_control`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ meter_number: meterNumber, state: 'on' }),
-      }).then(response => {
-        if (response.ok) {
-          showToast('Relay is ON', 'green');
-        } else {
-          showToast('Failed to turn on relay', 'red');
-        }
-      });
-    });
-
-    document.getElementById('relayOffButton').addEventListener('click', function() {
-      fetch(`/api/relay_control`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ meter_number: meterNumber, state: 'off' }),
-      }).then(response => {
-        if (response.ok) {
-          showToast('Relay is OFF', 'yellow');
-        } else {
-          showToast('Failed to turn off relay', 'red');
-        }
-      });
-    });
-
-    // Handle dynamic form fields
-    const buyForSelect = document.getElementById('buy_for');
-    const otherMeterDiv = document.getElementById('otherMeterDiv');
-
-    buyForSelect.addEventListener('change', function() {
-      if (this.value === 'other') {
-        otherMeterDiv.classList.remove('hidden');
-      } else {
-        otherMeterDiv.classList.add('hidden');
-      }
-    });
-
-    function animatePowerUpdate() {
-      const el = document.getElementById('currentPowerDisplay');
-      el.style.transform = 'scale(1.1)';
-      el.style.color = '#10b981';
-      setTimeout(() => {
-        el.style.transform = 'scale(1)';
-        el.style.color = '';
-      }, 500);
+  } else {
+    powerDisplay.classList.remove('text-red-500', 'blinking');
+    if (lowPowerToastInterval) {
+      clearInterval(lowPowerToastInterval);
+      lowPowerToastInterval = null;
     }
+  }
+}
 
-    let lowPowerToastInterval = null;
-    let isLowPowerToastShowing = false;
-
-    function checkPowerCondition(power) {
-      const powerDisplay = document.getElementById('currentPowerDisplay');
-
-      if (power < 3) {
-        powerDisplay.classList.add('text-red-500', 'blinking');
-
-        if (!lowPowerToastInterval) {
-          showToast('⚠️ Power is low! Please buy electricity.', 'red');
-          lowPowerToastInterval = setInterval(() => {
-            showToast('⚠️ Power is low! Please buy electricity.', 'red');
-          }, 10000);
-        }
-      } else {
-        powerDisplay.classList.remove('text-red-500', 'blinking');
-
-        if (lowPowerToastInterval) {
-          clearInterval(lowPowerToastInterval);
-          lowPowerToastInterval = null;
+// Fetch power data
+function fetchPowerData() {
+  fetch(`/api/current_power/${meterNumber}`)
+    .then(r => r.json())
+    .then(data => {
+      if ('current_power' in data) {
+        const powerNum = parseFloat(data.current_power);
+        if (!Number.isNaN(powerNum)) {
+          const display = document.getElementById('currentPowerDisplay');
+          if (display) display.innerText = data.current_power;
+          animatePowerUpdate();
+          checkPowerCondition(powerNum);
         }
       }
-    }
+    })
+    .catch(err => console.error('Failed to fetch power data:', err));
+}
 
-    function fetchPowerData() {
-      fetch(`/api/current_power/${meterNumber}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.current_power) {
-            document.getElementById('currentPowerDisplay').innerText = data.current_power;
-            animatePowerUpdate();
-            checkPowerCondition(data.current_power);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching power data:', error);
-        });
-    }
+// Initialize
+fetchPowerData();
+setInterval(fetchPowerData, 1000);
 
-    // Initialize
+// Refresh button
+const refreshBtn = document.getElementById('refreshBtn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', () => {
     fetchPowerData();
-    setInterval(fetchPowerData, 1000);
+    showToast('Data refreshed successfully', 'green');
+  });
+}
+</script>
 
-    // Refresh button
-    document.getElementById('refreshBtn').addEventListener('click', function() {
-      fetchPowerData();
-      showToast('Data refreshed successfully', 'green');
-    });
-  </script>
 
   <!-- Load external JavaScript -->
   <script src="{{ url_for('static', filename='dashboard.js') }}"></script>

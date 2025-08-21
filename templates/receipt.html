@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Receipt - {{ user.username if user else 'Receipt' }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* POS-friendly small receipt layout (approx 240px width for POS-58) */
+    body {
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+      -webkit-print-color-adjust: exact;
+    }
+
+    .receipt {
+      width: 240px;
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #e6e9ee;
+      box-shadow: 0 6px 18px rgba(12, 15, 20, 0.06);
+      color: #0f172a;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .brand h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+    .brand p { margin: 0; font-size: 11px; color: #475569; }
+
+    .line { border-top: 1px dashed #e6e9ee; margin: 8px 0; }
+
+    .row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; }
+    .label { font-size: 12px; color: #334155; }
+    .value { font-size: 13px; font-weight: 700; color: #0f172a; text-align: right; }
+
+    .small { font-size: 11px; color: #64748b; margin-top: 6px; }
+
+    .actions { display:flex; gap:8px; justify-content:center; margin-top:10px; }
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 8px;
+      border-radius:6px;
+      background:#3b82f6;
+      color:white;
+      font-size:12px;
+      text-decoration:none;
+      cursor:pointer;
+      border:none;
+    }
+    .btn.secondary { background:#10b981; }
+    .icon { width:14px; height:14px; display:inline-block; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .receipt { box-shadow: none; border: none; width: 240px; margin: 0 auto; }
+      .actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt" id="receiptRoot">
+    <div class="brand">
+      <h2>Smart Power System</h2>
+      <p>Electricity Receipt</p>
+    </div>
+
+    <!-- Data slots (filled server-side or client-side) -->
+    <div class="line"></div>
+
+    <div class="row"><div class="label">Meter Number</div><div class="value" id="r_meter">{{ user.meter_number if user else '' }}</div></div>
+    <div class="row"><div class="label">Name</div><div class="value" id="r_name">{{ user.username if user else '' }}</div></div>
+    <div class="row"><div class="label">Purchased</div><div class="value" id="r_purchased">{{ purchased_power if purchased_power is defined else '' }}</div></div>
+
+    <div class="line"></div>
+
+    <div class="row"><div class="label">Total Remaining</div><div class="value" id="r_total">{{ total_power if total_power is defined else '' }}</div></div>
+
+    <div class="small" id="r_ts">{{ timestamp if timestamp is defined else '' }}</div>
+
+    <div class="actions">
+      <button class="btn" id="printBtn" title="Print">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9V2h12v7M6 9h12v11H6V9z"/></svg>
+        Print
+      </button>
+
+      <button class="btn secondary" id="downloadBtn" title="Download / Save as PDF">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"/></svg>
+        Download
+      </button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Elements
+      const meterEl = document.getElementById('r_meter');
+      const nameEl = document.getElementById('r_name');
+      const purchasedEl = document.getElementById('r_purchased');
+      const totalEl = document.getElementById('r_total');
+      const tsEl = document.getElementById('r_ts');
+
+      // Check if server provided data (non-empty text)
+      const serverProvided = (meterEl && meterEl.innerText.trim()) || (purchasedEl && purchasedEl.innerText.trim());
+
+      if (!serverProvided) {
+        // Read query params from URL: meter_number, username, purchased_power, total_power, timestamp
+        const params = new URLSearchParams(window.location.search);
+        const meter = params.get('meter_number') || params.get('meter') || '';
+        const username = params.get('username') || params.get('name') || '';
+        const purchased = params.get('purchased_power') || params.get('purchased') || '';
+        const total = params.get('total_power') || params.get('total') || '';
+        const ts = params.get('timestamp') || params.get('ts') || '';
+
+        if (meterEl) meterEl.innerText = meter;
+        if (nameEl) nameEl.innerText = username;
+        if (purchasedEl) purchasedEl.innerText = purchased ? Number(purchased).toFixed(3) : '';
+        if (totalEl) totalEl.innerText = total ? Number(total).toFixed(3) : '';
+        if (tsEl) tsEl.innerText = ts ? `Date: ${new Date(ts).toLocaleString()}` : '';
+      } else {
+        // If server provided but timestamp not provided, add current local time
+        if (!tsEl.innerText.trim()) {
+          tsEl.innerText = `Date: ${new Date().toLocaleString()}`;
+        }
+      }
+
+      // Print button
+      document.getElementById('printBtn').addEventListener('click', function () {
+        window.print();
+      });
+
+      // Download button: open print dialog (user can select Save as PDF)
+      document.getElementById('downloadBtn').addEventListener('click', function () {
+        window.print();
+      });
+
+      // Accessibility: focus the print button
+      document.getElementById('printBtn').focus();
+    })();
+  </script>
+</body>
+</html>

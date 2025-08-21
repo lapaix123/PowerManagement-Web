@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Power Report - {{ meter }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center px-4 py-10">
+
+  <div class="w-full max-w-2xl bg-white shadow-2xl rounded-2xl p-8">
+    <!-- Report Header -->
+    <h1 class="text-3xl font-semibold text-center text-blue-800 mb-6">
+      Power Report for Meter <span class="text-gray-700">#{{ meter }}</span>
+    </h1>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-center gap-4 mb-6">
+      <!-- Back Button -->
+      <button onclick="history.back()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+        ⬅ Back
+      </button>
+
+      <!-- Forward Button -->
+      <button onclick="history.forward()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+        ➡ Forward
+      </button>
+
+      <!-- Refresh Button -->
+      <button onclick="location.reload()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+        🔄 Refresh
+      </button>
+    </div>
+
+    {% if error %}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6 text-center">
+        ⚠️ <strong>Error:</strong> {{ error }}
+      </div>
+    {% else %}
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div class="bg-blue-50 rounded-xl p-4 shadow-sm">
+          <h2 class="text-sm text-gray-500 mb-1">Purchased Power</h2>
+          <p class="text-xl font-semibold text-blue-700">{{ report.purchased_power }} kWh</p>
+        </div>
+
+        <div class="bg-green-50 rounded-xl p-4 shadow-sm">
+          <h2 class="text-sm text-gray-500 mb-1">Current Power</h2>
+          <p class="text-xl font-semibold text-green-700">{{ report.current_power }} kWh</p>
+        </div>
+
+        <div class="bg-yellow-50 rounded-xl p-4 shadow-sm">
+          <h2 class="text-sm text-gray-500 mb-1">Consumed Power</h2>
+          <p class="text-xl font-semibold text-yellow-700">{{ report.consumed_power }} kWh</p>
+        </div>
+
+        <div class="bg-gray-100 rounded-xl p-4 shadow-sm">
+          <h2 class="text-sm text-gray-500 mb-1">Last Updated</h2>
+          <p class="text-base font-medium text-gray-800">{{ report.updated_at }}</p>
+        </div>
+
+        <div class="bg-gray-100 rounded-xl p-4 shadow-sm col-span-1 sm:col-span-2">
+          <h2 class="text-sm text-gray-500 mb-1">Last Purchase</h2>
+          <p class="text-base font-medium text-gray-800">{{ report.purchased_at }}</p>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Back to Home -->
+    <div class="mt-8 text-center">
+      <a href="/" class="inline-block text-sm text-blue-600 hover:underline transition duration-200">
+        ⬅ Back to Home
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>

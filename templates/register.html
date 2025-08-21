@@ -16,8 +16,10 @@
   <header class="bg-blue-600 text-white p-4 flex items-center justify-between">
     <h1 class="text-xl font-bold">Cash Power System</h1>
     <nav>
-      <a href="#" class="mr-4 hover:underline">Home</a>
-      <a href="#" class="mr-4 hover:underline">Login</a>
+     <a href="{{ url_for('home') }}" class="btn-primary px-4 py-2 rounded">Home</a>
+
+      <a href="{{ url_for('login') }}" class="btn-primary px-4 py-2 rounded">Login</a>
+
     </nav>
   </header>
 
