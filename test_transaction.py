@@ -30,8 +30,8 @@ with app.app_context():
     transaction = Transaction(
         user_id=user.id,
         meter_number=user.meter_number,
-        purchase_power=None,
-        purchase_amount=100.0,
+        purchase_power=0.02,
+        purchase_amount=10.0,
         payment_method='mtn',
         date_purchased=datetime.now()
     )
