@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Payment - Cash Power System</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+
+    .payment-container {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .payment-container:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .payment-option {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .payment-option:hover {
+      border-color: #667eea;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .payment-option.selected {
+      border-color: #667eea;
+      background-color: rgba(102, 126, 234, 0.1);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 1rem;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: #667eea;
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .logo-container {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 10;
+    }
+
+    .logo-img {
+      height: 60px;
+      width: auto;
+    }
+
+    .floating-shapes {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .shape {
+      position: absolute;
+      border-radius: 50%;
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .shape:nth-child(1) {
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.1);
+      top: 10%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+
+    .shape:nth-child(2) {
+      width: 60px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.08);
+      top: 70%;
+      left: 80%;
+      animation-delay: 2s;
+    }
+
+    .shape:nth-child(3) {
+      width: 100px;
+      height: 100px;
+      background: rgba(255, 255, 255, 0.05);
+      top: 40%;
+      left: 85%;
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+  </div>
+
+  <!-- REG Logo -->
+  <div class="logo-container">
+    <img src="{{ url_for('static', filename='images/logo REg.png') }}" alt="REG Logo" class="logo-img">
+  </div>
+
+  <div class="min-h-screen flex items-center justify-center p-4">
+    <div class="payment-container w-full max-w-2xl p-8 rounded-2xl">
+      <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">Payment Method</h2>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="mb-6 p-4 rounded-lg border-l-4 bg-{{ category }}-50 border-{{ category }}-400 text-{{ category }}-700">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="mb-6">
+        <div class="text-lg font-semibold text-gray-700 mb-4">Purchase Summary</div>
+        <div class="bg-gray-50 p-4 rounded-lg">
+          <div class="flex justify-between mb-2">
+            <span class="text-gray-600">Amount:</span>
+            <span class="font-semibold">${{ amount }}</span>
+          </div>
+          {% if meter_number %}
+          <div class="flex justify-between">
+            <span class="text-gray-600">Meter Number:</span>
+            <span class="font-semibold">{{ meter_number }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('process_payment') }}" id="paymentForm">
+        <input type="hidden" name="amount" value="{{ amount }}">
+        {% if meter_number %}
+        <input type="hidden" name="meter_number" value="{{ meter_number }}">
+        {% endif %}
+        {% if buy_for %}
+        <input type="hidden" name="buy_for" value="{{ buy_for }}">
+        {% endif %}
+        {% if other_meter_number %}
+        <input type="hidden" name="other_meter_number" value="{{ other_meter_number }}">
+        {% endif %}
+
+        <div class="mb-6">
+          <div class="text-lg font-semibold text-gray-700 mb-4">Select Payment Method</div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Mobile Money Options -->
+            <div class="payment-option p-4 flex flex-col items-center" data-payment="mtn">
+              <img src="{{ url_for('static', filename='images/mtn.png') }}" alt="MTN Mobile Money" class="h-16 mb-2">
+              <span class="text-sm font-medium text-gray-700">MTN Mobile Money</span>
+            </div>
+            
+            <div class="payment-option p-4 flex flex-col items-center" data-payment="airtel">
+              <img src="{{ url_for('static', filename='images/airtel.png') }}" alt="Airtel Money" class="h-16 mb-2">
+              <span class="text-sm font-medium text-gray-700">Airtel Money</span>
+            </div>
+            
+            <!-- Card Options -->
+            <div class="payment-option p-4 flex flex-col items-center" data-payment="visa">
+              <img src="{{ url_for('static', filename='images/visa.png') }}" alt="Visa" class="h-16 mb-2">
+              <span class="text-sm font-medium text-gray-700">Visa</span>
+            </div>
+            
+            <div class="payment-option p-4 flex flex-col items-center" data-payment="mastercard">
+              <img src="{{ url_for('static', filename='images/mastergard.png') }}" alt="Mastercard" class="h-16 mb-2">
+              <span class="text-sm font-medium text-gray-700">Mastercard</span>
+            </div>
+          </div>
+          
+          <input type="hidden" name="payment_method" id="payment_method" required>
+        </div>
+
+        <!-- Mobile Money Payment Details (initially hidden) -->
+        <div id="mobile_money_details" class="mb-6 hidden">
+          <div class="text-lg font-semibold text-gray-700 mb-4">Mobile Money Details</div>
+          
+          <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Phone Number</label>
+            <input type="text" name="phone_number" class="input-field" placeholder="Enter your phone number">
+          </div>
+        </div>
+
+        <!-- Card Payment Details (initially hidden) -->
+        <div id="card_details" class="mb-6 hidden">
+          <div class="text-lg font-semibold text-gray-700 mb-4">Card Details</div>
+          
+          <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Card Number</label>
+            <input type="text" name="card_number" class="input-field" placeholder="XXXX XXXX XXXX XXXX">
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-gray-700 font-medium mb-2">Expiry Date</label>
+              <input type="text" name="expiry_date" class="input-field" placeholder="MM/YY">
+            </div>
+            <div>
+              <label class="block text-gray-700 font-medium mb-2">CVV</label>
+              <input type="text" name="cvv" class="input-field" placeholder="XXX">
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-gray-700 font-medium mb-2">Cardholder Name</label>
+            <input type="text" name="cardholder_name" class="input-field" placeholder="Enter cardholder name">
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary mt-6">
+          Complete Payment
+        </button>
+      </form>
+
+      <div class="mt-6 text-center">
+        <a href="{{ url_for('user_dashboard') }}" class="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+          Cancel and return to dashboard
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Payment method selection
+    const paymentOptions = document.querySelectorAll('.payment-option');
+    const paymentMethodInput = document.getElementById('payment_method');
+    const mobileMoneyDetails = document.getElementById('mobile_money_details');
+    const cardDetails = document.getElementById('card_details');
+    
+    paymentOptions.forEach(option => {
+      option.addEventListener('click', function() {
+        // Remove selected class from all options
+        paymentOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        // Add selected class to clicked option
+        this.classList.add('selected');
+        
+        // Set the payment method value
+        const paymentMethod = this.getAttribute('data-payment');
+        paymentMethodInput.value = paymentMethod;
+        
+        // Show/hide appropriate payment details
+        if (paymentMethod === 'mtn' || paymentMethod === 'airtel') {
+          mobileMoneyDetails.classList.remove('hidden');
+          cardDetails.classList.add('hidden');
+        } else if (paymentMethod === 'visa' || paymentMethod === 'mastercard') {
+          cardDetails.classList.remove('hidden');
+          mobileMoneyDetails.classList.add('hidden');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
